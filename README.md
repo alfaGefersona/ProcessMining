@@ -135,6 +135,81 @@ analises/           Scripts de análise PM4Py + notebook Jupyter
 output/             Dados extraídos e relatórios (gitignored)
 ```
 
+## API Datajud CNJ
+
+| Atributo | Valor |
+|----------|-------|
+| **Base URL** | `https://api-publica.datajud.cnj.jus.br` |
+| **Endpoint TJPR** | `/api_publica_tjpr/_search` |
+| **Motor** | Elasticsearch — paginação `search_after` |
+| **Autenticação** | API Key pública CNJ (inclusa em `datajud/config.py`) |
+| **Acesso** | Público e gratuito |
+| **Página máxima** | 10.000 documentos por request (usado: 100) |
+
+**Links oficiais:**
+
+- Documentação Datajud: https://datajud-wiki.cnj.jus.br
+- Portal de acesso: https://www.cnj.jus.br/sistemas/datajud/
+- Painel de transparência CNJ: https://painel-estatistica.stg.cloud.cnj.jus.br
+- Tabela Processual Unificada (TPU — códigos de movimentos): https://www.cnj.jus.br/sgt/consulta_publica_classes.php
+
+**Normas e resoluções relevantes:**
+
+| Norma | Conteúdo |
+|-------|----------|
+| CNJ Resolução 254/2018 | Prioridade de tramitação para casos de violência doméstica |
+| CNJ Resolução 385/2021 | Prioridade de pauta em instâncias superiores |
+| CF art. 5º LXXVIII | Garantia de razoável duração do processo |
+| CPP arts. 394–405 | Fluxo normativo da Ação Penal Ordinária |
+| Lei 11.340/2006 | Lei Maria da Penha |
+
+---
+
+## Referências Acadêmicas
+
+### Process Mining — Fundamentos
+
+- **van der Aalst, W.M.P.** (2016). *Process Mining: Data Science in Action* (2nd ed.). Springer.
+  Referência central: algoritmos de discovery, conformance (fitness, precision, generalization, simplicity) e perspectiva organizacional.
+  https://doi.org/10.1007/978-3-662-49851-4
+
+- **van der Aalst, W.M.P.** (2011). *Process Mining: Discovery, Conformance and Enhancement of Business Processes*. Springer.
+  https://doi.org/10.1007/978-3-642-19345-3
+
+- **Leemans, S.J.J., Fahland, D., van der Aalst, W.M.P.** (2013). Discovering block-structured process models from event logs — A constructive approach. *Petri Nets 2013*, LNCS 7927.
+  Algoritmo **Inductive Miner** utilizado para descoberta da Rede de Petri.
+  https://doi.org/10.1007/978-3-642-38697-8_17
+
+- **van der Aalst, W.M.P., Adriansyah, A., van Dongen, B.** (2012). Replaying history on process models for conformance checking and performance analysis. *WIREs Data Mining and Knowledge Discovery*, 2(2), 182–192.
+  Base do **Token-Based Replay (TBR)** utilizado no conformance check.
+  https://doi.org/10.1002/widm.1045
+
+- **Munoz-Gama, J., Carmona, J.** (2010). A Fresh Look at Precision in Process Conformance. *BPM 2010*, LNCS 6336.
+  Base da métrica **ETC Precision** utilizada na avaliação do modelo.
+  https://doi.org/10.1007/978-3-642-15618-2_16
+
+### Ferramentas
+
+- **PM4Py** — Python library for Process Mining (Fraunhofer FIT / RWTH Aachen):
+  https://pm4py.fit.fraunhofer.de
+  Documentação: https://processintelligence.solutions/static/api/2.7.11/index.html
+
+- **Disco** — Process Mining tool (Fluxicon):
+  https://fluxicon.com/disco/
+
+- **IEEE XES Standard** (eXtensible Event Stream):
+  https://xes-standard.org/
+
+### Process Mining em Justiça / Setor Público
+
+- **Leemans, M., van der Aalst, W.M.P.** (2018). Using process mining to investigate judicial processes. *SSRN*.
+  https://doi.org/10.2139/ssrn.3280716
+
+- **Teinemaa, I., Dumas, M., Rosa, M.L., Maggi, F.M.** (2019). Outcome-oriented predictive process monitoring. *ACM TKDD*, 13(2).
+  https://doi.org/10.1145/3301300
+
+---
+
 ## Principais achados — TJPR 2020–2026
 
 | Métrica | Valor |
