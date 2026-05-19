@@ -345,18 +345,17 @@ def visualizar(feats_kmeans: pd.DataFrame, resumo_var: pd.DataFrame,
                resumo_km: pd.DataFrame, k: int,
                tribunal: str, slug_classe: str) -> None:
     """
-    Gera 4 subplots:
+    Gera 3 subplots:
       1. Scatter duracao × n_eventos (colorido por cluster K-Means)
       2. Tamanho dos clusters K-Means (barras)
       3. Duração mediana por cluster K-Means (barras)
-      4. Cobertura das top variantes (barras horizontais empilhadas)
     """
-    fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
     fig.suptitle(f"Agrupamento de Casos — {tribunal} · {slug_classe.replace('_', ' ')}",
                  fontsize=14, fontweight="bold")
 
     # ── 1. Scatter K-Means ────────────────────────────────────────────────────
-    ax = axes[0, 0]
+    ax = axes[0]
     if "cluster_kmeans" in feats_kmeans.columns:
         for cid in sorted(feats_kmeans["cluster_kmeans"].unique()):
             sub = feats_kmeans[feats_kmeans["cluster_kmeans"] == cid]
@@ -377,7 +376,7 @@ def visualizar(feats_kmeans: pd.DataFrame, resumo_var: pd.DataFrame,
     ax.grid(alpha=0.3)
 
     # ── 2. Tamanho dos clusters K-Means ───────────────────────────────────────
-    ax = axes[0, 1]
+    ax = axes[1]
     if not resumo_km.empty:
         grupos = resumo_km["grupo"].tolist()
         sizes  = resumo_km["n_casos"].tolist()
@@ -394,7 +393,7 @@ def visualizar(feats_kmeans: pd.DataFrame, resumo_var: pd.DataFrame,
     ax.grid(axis="y", alpha=0.3)
 
     # ── 3. Duração mediana por cluster ────────────────────────────────────────
-    ax = axes[1, 0]
+    ax = axes[2]
     if not resumo_km.empty:
         grupos = resumo_km["grupo"].tolist()
         durs   = resumo_km["duracao_mediana_dias"].tolist()
@@ -409,31 +408,6 @@ def visualizar(feats_kmeans: pd.DataFrame, resumo_var: pd.DataFrame,
         ax.text(0.5, 0.5, "K-Means não executado", ha="center", va="center",
                 transform=ax.transAxes)
     ax.grid(axis="y", alpha=0.3)
-
-    # ── 4. Cobertura das top variantes ────────────────────────────────────────
-    ax = axes[1, 1]
-    if not resumo_var.empty:
-        nomes = resumo_var["grupo"].tolist()
-        pcts  = resumo_var["pct_total"].tolist()
-        colors_var = [CLUSTER_COLORS[i % len(CLUSTER_COLORS)] for i in range(len(nomes))]
-        # Horizontal stacked bar (uma única barra 100%)
-        left = 0
-        for nome, pct, color in zip(nomes, pcts, colors_var):
-            ax.barh(0, pct, left=left, color=color, edgecolor="white", linewidth=0.5,
-                    label=f"{nome} ({pct:.1f}%)")
-            if pct >= 3:
-                ax.text(left + pct / 2, 0, f"{pct:.0f}%",
-                        ha="center", va="center", fontsize=8, color="white", fontweight="bold")
-            left += pct
-        ax.set_xlim(0, 100)
-        ax.set_xlabel("Cobertura (%)")
-        ax.set_yticks([])
-        ax.set_title("Cobertura das Top Variantes")
-        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15),
-                  ncol=2, fontsize=7)
-    else:
-        ax.text(0.5, 0.5, "Sem dados de variantes", ha="center", va="center",
-                transform=ax.transAxes)
 
     plt.tight_layout()
     out_path = os.path.join(IMG_DIR, f"{tribunal}_{slug_classe}_clusters.png")

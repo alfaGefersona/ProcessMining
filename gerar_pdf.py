@@ -79,6 +79,7 @@ body {
     border-bottom: 4px solid #16213e;
     margin-bottom: 2cm;
     page-break-after: always;
+    position: relative;
 }
 @page capa {
     margin: 0;
@@ -114,10 +115,13 @@ body {
     padding: 0;
 }
 .capa-meta {
+    position: absolute;
+    bottom: 1.5cm;
+    right: 1.5cm;
+    text-align: right;
     font-size: 10pt;
     color: #555;
-    line-height: 2;
-    margin-top: 1.5cm;
+    line-height: 1.8;
 }
 .capa-meta strong { color: #16213e; }
 .capa-footer {
@@ -282,7 +286,6 @@ em { color: #555; }
 # SECÇÕES A EXCLUIR DO PDF (conteúdo detalhado para desenvolvedores)
 # ==============================================================================
 PDF_EXCLUDE_HEADINGS = [
-    "### 2.6",   # Pipeline — algoritmos detalhados
     "### 2.7",   # Bugs identificados e corrigidos
     "## 6.",     # Catálogo de arquivos gerados
     "## 7.",     # Metodologia PM² — rastreabilidade
@@ -322,9 +325,9 @@ IMAGENS_INLINE = [
              "noise=0.4 filtra comportamentos em menos de 40% dos traces — modelo mais limpo. "
              "Representa o padrão comportamental dominante: casos sem recursos e encerramentos diretos.",
              "full"),
-            ("petri_net_cluster3_top20v.png",
-             "Fig. A5 — Rede de Petri — Top-20 Variantes do Cluster Dominante (noise=0.3)",
-             "Modelo mais legível: restringe o Cluster 0 às 20 variantes mais frequentes antes da mineração. "
+            ("petri_net_cluster0_top20v.png",
+             "Fig. A5 — Rede de Petri — Top-20 Variantes do Cluster Dominante (Cluster 0, noise=0.3)",
+             "Modelo mais legível: restringe o Cluster 0 (48.4%, 6.408 casos) às 20 variantes mais frequentes antes da mineração. "
              "Reduz τ-transitions causadas por comportamento ad hoc. "
              "Mostra o rito predominante sem ruído das variantes raras.",
              "full"),
@@ -389,8 +392,18 @@ IMAGENS_INLINE = [
         "heading": "3.2.7 Conformance",
         "imgs": [
             ("conformance_fitness.png",
-             "Fig. D1 — Fitness Token Based Replay (subset 2025, amostra 500 casos)",
-             "Fitness médio: 96.49%. Concentração em 1.0 = alta conformidade com modelo descoberto.",
+             "Fig. D1 — Fitness Token Based Replay — Modelo Descoberto (500 casos, seed=42)",
+             "Fitness médio 99.6%. Tabela com as 4 métricas van der Aalst: descoberto × normativo.",
+             "full"),
+            ("conformance_normativo.png",
+             "Fig. D2 — Conformance Modelo Normativo CPP arts. 394-405 (100% estrito, 0 tau)",
+             "Cobertura dos 8 marcos CPP + métricas comparativas. Fitness normativo 46.9%. "
+             "0% traces perfeitos. Dois gaps críticos: Citação 1.1% (mandado físico) + Trânsito 83.8%.",
+             "full"),
+            ("petri_net_normativa_cpp.png",
+             "Fig. D3 — Petri Net Normativa CPP arts. 394-405 (construção manual — 100% estrita)",
+             "8 places, 8 transições obrigatórias visíveis, 0 tau. "
+             "Modelo mínimo: cada etapa do rito CPP é transição visível, sem concessão ao subregistro PJe.",
              "full"),
         ],
     },
@@ -580,7 +593,7 @@ def inject_images_inline(html: str, imgs_dir: str,
 
         search_from = m.end()
         # Procurar próximo heading do mesmo nível ou superior
-        next_h      = re.search(rf'<h[{1}{cur_lvl}]', html[search_from:])
+        next_h      = re.search(rf'<h[1-{cur_lvl}]', html[search_from:])
         if next_h:
             insert_at = search_from + next_h.start()
         else:
@@ -603,16 +616,13 @@ def md_to_html(md_text: str) -> str:
 def build_capa_html() -> str:
     return """
 <div class="capa">
-  <span class="capa-badge">Projeto Acadêmico — Mineração de Processos</span>
   <h1>Ação Penal — Procedimento Ordinário<br>no TJPR</h1>
   <h2>Análise via PM² Process Mining Methodology</h2>
+  <h2>Trabalho Final da Disciplina de Mineração de Processos</h2>
   <div class="capa-meta">
-    <strong>Tribunal:</strong> Tribunal de Justiça do Paraná (TJPR)<br>
-    <strong>Período de ajuizamento:</strong> 01/01/2020 → 16/05/2026<br>
-    <strong>Classe processual:</strong> Ação Penal - Procedimento Ordinário (CPP arts. 394–405)<br>
-    <strong>Total de casos:</strong> 13.234 processos fechados (50.000 extraídos)<br>
-    <strong>~64,9% dos casos:</strong> violência doméstica/protetiva (Lei Maria da Penha)<br>
-    <strong>Tipo de log:</strong> LO — Log Original (API CNJ Datajud)
+    <strong>Aluno: Geferson Artuzo</strong><br>
+    <strong>Professor: Luiz Fernando Puttow Southier </strong><br>
+    <strong>Universidade Tecnlógica Federal do Paraná </strong><br>
   </div>
 </div>
 """

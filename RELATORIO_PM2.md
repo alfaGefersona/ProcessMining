@@ -10,13 +10,34 @@
 
 ---
 
+## Siglas e Abreviaturas
+
+| Sigla | Significado |
+|-------|------------|
+| **CPP** | Código de Processo Penal (Decreto-Lei nº 3.689/1941) |
+| **CP** | Código Penal (Decreto-Lei nº 2.848/1940) |
+| **CF** | Constituição Federal de 1988 |
+| **TJPR** | Tribunal de Justiça do Estado do Paraná |
+| **CNJ** | Conselho Nacional de Justiça |
+| **TPU** | Tabela Processual Unificada (CNJ) |
+| **DFG** | Directly-Follows Graph — grafo de sequências diretas entre atividades |
+| **TBR** | Token-Based Replay — algoritmo de conformance check |
+| **ETC** | Entropic Conformance — métrica de precisão |
+| **PM²** | Process Mining Project Methodology |
+| **PJe** | Processo Judicial Eletrônico (sistema do CNJ) |
+| **SLA** | Service Level Agreement — prazo acordado/legal de atendimento |
+| **AP** | Ação Penal |
+| **QP** | Questão de Pesquisa |
+
+---
+
 ## 1. PLANEJAMENTO
 
 ### 1.1 Processo de Negócio Selecionado
 
-A **Ação Penal - Procedimento Ordinário** é o rito processual penal de competência do juízo singular de primeiro grau, obrigatório para crimes com pena máxima igual ou superior a 4 anos (CPP art. 394, §1º, I). É o rito de maior complexidade instrutória do processo penal brasileiro, com fases bem definidas em lei: recebimento da denúncia, citação, resposta à acusação, possibilidade de absolvição sumária, audiência de instrução e julgamento com interrogatório e debates, sentença e trânsito em julgado.
+A **Ação Penal - Procedimento Ordinário** é o rito penal obrigatório para crimes com pena máxima ≥ 4 anos (CPP art. 394, §1º, I), com fases definidas em lei: recebimento da denúncia, citação, resposta à acusação, absolvição sumária, audiência de instrução e julgamento, sentença e trânsito em julgado. É o rito com maior complexidade instrutória — 64,9% dos casos no TJPR envolvem violência doméstica, feminicídio ou crimes protetivos (Lei 11.340/2006).
 
-**Crimes típicos julgados por este rito:**
+**Crimes julgados por este rito:**
 
 | Crime | Base legal |
 |-------|-----------|
@@ -27,16 +48,6 @@ A **Ação Penal - Procedimento Ordinário** é o rito processual penal de compe
 | Lesão corporal grave em violência doméstica | CP art. 129 §9º / Lei 11.340/2006 |
 | Descumprimento de medida protetiva (c/ violência) | CP art. 147-B |
 | Extorsão, sequestro, corrupção ativa (pena ≥ 4 anos) | CP arts. 158, 159, 333 |
-
-**Distinção entre os ritos processuais penais:**
-
-| Rito | Pena máxima | Base legal |
-|------|-------------|-----------|
-| **Ordinário** (este estudo) | **≥ 4 anos** | CPP art. 394 §1º I |
-| Sumário | 2 a 4 anos | CPP art. 394 §1º II |
-| Sumaríssimo (JECrim) | ≤ 2 anos | Lei 9.099/1995 |
-
-O rito ordinário é o mais relevante para análise de process mining por combinar: (a) alto volume de casos, (b) fluxo normativo detalhado e mensurável, (c) múltiplos marcos processuais obrigatórios e (d) impacto social direto — 64,9% dos casos no TJPR envolvem violência doméstica, feminicídio ou crimes protetivos (Lei Maria da Penha, Lei 11.340/2006). Tramita em primeiro grau e percorre um fluxo de instrução e julgamento definido nos arts. 394–405 do CPP.
 
 #### Fluxo normativo previsto no CPP (arts. 394–405)
 
@@ -65,16 +76,6 @@ O rito ordinário é o mais relevante para análise de process mining por combin
 │                          Trânsito em Julgado                        │
 └─────────────────────────────────────────────────────────────────────┘
 ```
-
-#### Por que Ação Penal Ordinária é adequada para PM²
-
-| Critério | Ação Penal Ordinária |
-|----------|---------------------|
-| Fluxo normativo definido em lei | ✓ CPP arts. 394-405 |
-| Volume de casos fechados | ✓ 13.234  |
-| Relevância social | ✓ ~64.9% violência/protetiva |
-| Perfis comportamentais | ✓ Alta variância — 4 clusters |
-| Hipótese testável | Processo penal dentro de prazo razoável? |
 
 ### 1.2 Questões de Pesquisa
 
@@ -118,27 +119,7 @@ em termos de duração e prioridade, conforme exige a CNJ Resolução 254/2018?
 | **Total extraído (query ES)** | 50.000 processos |
 | **Após filtro classe exata** | 13.234 processos (Ação Penal - Procedimento Ordinário, fechados) |
 
-> **Nota técnica — Composição do dataset bruto extraído (50.000 processos):**
-> A API Datajud pública não suporta filtro por `classe.codigo`. O `QUERY_BODY` usa `match`
-> full-text em `classe.nome` ("Procedimento Ordinário") combinado com `should` (min. 1) em
-> `assuntos.nome` com 9 termos de violência/gênero. O `match` full-text captura qualquer
-> classe cujo nome contenha "Procedimento" ou "Ordinário", permitindo vazamento de classes
-> adjacentes no CSV bruto:
->
-> | Processos (aprox.) | Classe |
-> |-------------------:|--------|
-> | **19.356** | **Ação Penal - Procedimento Ordinário** ← alvo |
-> | ~15.000 | Ação Penal - Procedimento Sumário ← vazamento |
-> | ~500 | Ação Penal - Procedimento Sumaríssimo ← vazamento |
-> | ~15.000 | Outras classes (PIC-MP, JECrim, PCC, etc.) ← vazamento |
->
-> **Nota:** O "Procedimento Comum Cível" que vaza são ações civis (indenizatórias, de família)
-> que mencionam keywords como "Mulher" ou "Doméstica" no assunto — NÃO são processos criminais.
-> Crimes contra a mulher tramitam exclusivamente em classes penais (AP Ordinária, Sumário, etc.).
->
-> A filtragem exata por `case:classe == "Ação Penal - Procedimento Ordinário"` é aplicada
-> em pós-processamento pelo `exportar_filtrado.py`, garantindo que apenas os 19.356
-> processos corretos entrem no pipeline. Destes, 13.234 possuem atividade terminal (casos fechados).
+> **Nota técnica:** A API pública não suporta filtro por `classe.codigo`. O `match` full-text captura classes adjacentes (AP Sumário, Sumaríssimo, etc.) que são removidas em pós-processamento pelo `exportar_filtrado.py` via filtro exato `case:classe == "Ação Penal - Procedimento Ordinário"`. Destes, 13.234 possuem atividade terminal (casos fechados).
 
 ### 2.3 Composição do Log de Eventos
 
@@ -156,18 +137,11 @@ em termos de duração e prioridade, conforme exige a CNJ Resolução 254/2018?
 ### 2.4 Processamento e Filtros Aplicados
 
 ```
-RAW API (50.000 proc. — query ES: Ação Penal + mulher/protetiva/doméstica 2020-2026)
-    │
-    ├─ [F1] Filtro classe exata = "Ação Penal - Procedimento Ordinário"
-    │       → 13.234 processos (fechados)
-    │
-    ├─ [F2] Remoção casos em andamento
-    │       (sem atividade terminal: Trânsito, Baixa, Definitivo, Procedência/Improcedência)
-    │
-    ├─ [F3] Deduplicação por código TPU + timestamp
-    │       (lógica nativa da extração)
-    │
-    └─ LOG FINAL: 13.234 processos / ~2.376.663 eventos
+RAW API (50.000 proc.)
+    [F1] Filtro classe exata = "Ação Penal - Procedimento Ordinário" → 13.234
+    [F2] Remoção casos sem atividade terminal (em andamento)
+    [F3] Deduplicação por código TPU + timestamp
+    LOG FINAL: 13.234 processos / ~2.376.663 eventos
 ```
 
 **Formato de saída:** CSV UTF-8 BOM + IEEE XES 1.0 (importável no Disco/PM4Py)
@@ -177,45 +151,17 @@ RAW API (50.000 proc. — query ES: Ação Penal + mulher/protetiva/doméstica 2
 ```
 Datajud API (Elasticsearch CNJ)
      ↓  main.py
-     │  Extrai processos via paginação search_after + retry/backoff
-     │  Filtro ES: Ação Penal + {mulher/protetiva/doméstica}, dataAjuizamento 2020-2026
-     │
      ▼  output/TJPR_{ts}.csv          ← 50.000 processos, todas as classes
      │
      ↓  exportar_filtrado.py
-     │  Filtro 1: case:classe == "Ação Penal - Procedimento Ordinário"  → 13.234
-     │  Filtro 2: remove processos SEM atividade terminal (em andamento) →  13.234 fechados
-     │  Filtro 3 (opcional): top N variantes mais frequentes
-     │
      ▼  TJPR_Acao_Penal_*.csv/.xes    ← 13.234 casos fechados, 2.376.663 eventos
      │
-     ├─ happy_path_report.py
-     │  Filtro 4: 1º evento >= 2020-01-01 AND último evento <= 2026-05-13
-     │  Filtro 5: nivel >= 1 (terminal de mérito + sem recurso + sem desvio admin)
-     │  ▼  happy_path.csv/.xes             ← casos que seguiram o rito completo
-     │     happy_path_transicoes.csv       ← 1 linha/transição A→B com duração em dias
-     │
-     ├─ analisar.py
-     │  Filtro 6 (DFG/Petri Net): ajuizamento ano=2025 → 1.277 casos (reduz tamanho dos grafos)
-     │  Filtro 7 (DFG): remove arcos < 2% do máximo (3.497 → 201 arcos visíveis)
-     │  Conformance: amostra aleatória 500 casos (Token Replay custoso — O(n²))
-     │  ▼  analises/imgs/*.png              ← 10 imagens PM4Py (discovery, performance, rework)
-     │
-     ├─ agrupar.py
-     │  Agrupamento A: top 10 variantes por frequência
-     │  Agrupamento B: K-Means k=4 por features (duração, eventos, marcos processuais)
-     │  ▼  cluster_variante_01..10.csv      ← 1 arquivo por variante
-     │     cluster_kmeans_0..3.csv/.xes     ← 1 arquivo por cluster
-     │     features_kmeans.csv              ← 1 linha/caso com todas as features
-     │
+     ├─ happy_path_report.py    → happy path + transições A→B com duração em dias
+     ├─ analisar.py             → DFG, Petri Net, performance, rework, conformance
+     ├─ agrupar.py              → K-Means k=4, top variantes
      └─ analise_violencia_mulher.py
-        Filtro 8: case:assunto_principal contém keywords violência/protetiva/mulher
-                  → 8.585 de 13.234 casos (~64.9%)
-        SLA liminar: Ajuizamento → 1ª atividade "Liminar"       (alerta > 2 dias)
-        SLA total:   Ajuizamento → 1ª atividade terminal         (alerta > 365 dias)
-        ▼  violencia_sla_detalhado.csv      ← 1 linha/caso com SLAs e alertas
-           violencia_sla_resumo.txt         ← resumo executivo com top críticos
-           analises/imgs/violencia_*.png    ← 5 imagens SLA
+        Filtro: assunto ∈ {violência/protetiva/mulher} → 8.585/13.234 casos (~64.9%)
+        SLA total: Ajuizamento → Trânsito (alerta > 365 dias — CNJ Res. 254/2018)
 ```
 
 ### 2.6 Pipeline — Algoritmos, Datasets e Saídas por Etapa
@@ -299,7 +245,7 @@ nivel_happy_path(atividades_do_caso):
 | Organizacional | **Todos 13.234** | volume por `org:resource` (vara); duração mediana por vara dominante (mais frequente por caso) |
 | Conformance TBR | **Subset ano=2025** (amostra 500, seed=42) | Token Based Replay — simula tokens na Petri Net; penaliza tokens faltando/sobrando; fitness = proporção de traces que se encaixam no modelo |
 
-> ¹ **Nota técnica:** O gráfico "Sojourn Time" mede o tempo **entre** eventos consecutivos (transition time), não o tempo **dentro** de uma atividade. Como cada evento é um timestamp pontual (sem duração registrada), essa é a melhor aproximação disponível. A distinção é relevante: transition time alto em atividade X pode indicar fila antes de X ou demora depois de X.
+> ¹ **Nota técnica:** O gráfico "Sojourn Time" mede o tempo **entre** eventos consecutivos (transition time), não o tempo **dentro** de uma atividade. Como cada evento é um timestamp pontual (sem duração registrada), essa é a melhor aproximação disponível.
 
 **Saídas:**
 
@@ -415,37 +361,15 @@ Durante a revisão do código do pipeline foram identificados e corrigidos os se
 
 #### 3.2.1 Descoberta de Processo (Discovery)
 
-**O que é Process Discovery?**
-Discovery é a tarefa central de Process Mining: a partir de um log de eventos (sequências
-reais de atividades registradas em sistemas), algoritmos descobrem automaticamente um
-**modelo de processo** — uma representação formal do fluxo observado na prática. O modelo
-resultante não é desenhado manualmente: emerge dos dados.
-
-Dois tipos de modelos foram descobertos:
+A partir do log de eventos, algoritmos descobrem automaticamente um modelo formal do fluxo observado na prática — sem desenho manual.
 
 ---
 
 **DFG — Directly-Follows Graph** (`imgs/dfg_frequencia.png` e `imgs/dfg_performance.png`)
 
-O DFG é o modelo mais simples e direto de Process Mining. Para cada par de atividades
-(A → B), conta quantas vezes B ocorreu imediatamente após A no mesmo processo. O resultado
-é um grafo dirigido onde:
-- **Nós** = atividades processuais (ex: "Citação", "Sentença", "Recurso")
-- **Arcos** = transições diretas entre atividades, com peso = frequência ou tempo médio
+O DFG conta quantas vezes B ocorreu imediatamente após A no mesmo processo. Arcos filtrados: ≥ 2% do máximo de frequência (201 de 3.497 arcos originais, subset 2025). O **DFG de Frequência** mostra caminhos mais comuns; o **DFG de Performance** exibe o tempo médio em dias por transição.
 
-**DFG de Frequência** mostra quais caminhos são mais comuns. Arco mais grosso = fluxo
-principal. DFG de **Performance** exibe o tempo médio (em dias) em cada transição —
-os arcos mais lentos são os gargalos do processo.
-
-> **Nota técnica — filtros aplicados:**
-> Com 13.234 casos e 377 atividades distintas, o DFG completo gera 3.497 arcos —
-> inutilizável visualmente. Dois filtros foram aplicados:
-> 1. **Filtro de ano:** apenas **1.277 casos ajuizados em 2025** para discovery
->    (subconjunto representativo e recente). Demais análises usam todos os 13.234.
-> 2. **Threshold de frequência:** apenas arcos com frequência ≥ **2% do arco mais
->    frequente** → reduz de 3.497 para **201 arcos visíveis** sem perder o fluxo principal.
-
-Atividades mais frequentes no log (top 5, baseado no dataset 2025):
+Atividades mais frequentes no dataset 2025 (top 5):
 
 | Atividade | Tipo | Papel no processo |
 |-----------|------|------------------|
@@ -455,60 +379,30 @@ Atividades mais frequentes no log (top 5, baseado no dataset 2025):
 | Entrega em carga/vista | Ato cartorário | Entrega de autos para vista de parte/advogado |
 | Documento - Outros documentos | Ato de juntada | Juntada genérica de peças ao processo |
 
-> **Achado:** Atividades cartoriais (confirmação, expedição, juntada) dominam o DFG —
-> não atividades jurisdicionais (sentença, citação, audiência). Isso indica que
-> **a maior parte dos eventos registrados é administrativa**, não decisória. O volume de
-> movimentação cartorial mascara a espera real por decisão judicial.
+> **Achado:** Atividades cartoriais dominam o DFG — não atividades jurisdicionais (sentença, citação, audiência). A maior parte dos eventos registrados é administrativa, mascarando a espera real por decisão judicial.
 
 ---
 
-**Petri Net — Inductive Miner** (`imgs/petri_net.png`)
+**Petri Net — Inductive Miner** (`imgs/petri_net.png`, `imgs/petri_net_cluster_dominante.png`, `imgs/petri_net_cluster0_top20v.png`)
 
-O **Inductive Miner** (Leemans et al., 2013) é um algoritmo de discovery que produz uma
-**Rede de Petri** — modelo formal com garantias estruturais (soundness: toda execução tem
-início e fim, sem deadlocks ou livelocks). Funciona recursivamente:
-
-1. Divide o log em sublogs usando "cortes" (sequential, parallel, choice, loop)
-2. Aplica o corte mais simples que explica os dados
-3. Repete para cada sublog até casos triviais
-
-O parâmetro `noise_threshold=0.2` significa que **20% das traces mais infrequentes** em
-cada passo recursivo podem ser ignoradas como ruído — aumenta a legibilidade sem grandes
-perdas de fitness.
+O **Inductive Miner** (Leemans et al., 2013) produz uma Rede de Petri com garantias estruturais (soundness: toda execução tem início e fim, sem deadlocks). Divide o log recursivamente em cortes (sequential, parallel, choice, loop) com `noise_threshold` definindo % de traces infrequentes ignoradas.
 
 **Elementos da Rede de Petri:**
-- **Círculos (places)** = estados do processo (ex: "processo aguardando citação")
-- **Retângulos brancos/cinza (transitions)** = atividades reais com nome (ex: "Sentença")
-- **Retângulos pretos (silent/tau transitions)** = transições invisíveis de roteamento —
-  representam XOR-splits (escolhas), AND-splits (paralelismo) e loops estruturais.
-  **Não são erros**: são artefatos necessários para modelar bifurcações sem nome explícito.
-- **Arcos (→)** = fluxo de tokens entre states e transitions
 
-> **Por que tantos retângulos pretos (tau)?**
-> Com 377 atividades distintas e 13.234 variantes únicas no TJPR, o Inductive Miner
-> precisa criar muitas estruturas de roteamento para acomodar a diversidade observada.
-> Cada bifurcação processual (processo pode ir para atividade A OU B após C) vira um
-> tau. Modelo com `noise=0.2`: **108 places / 144 transitions (≈ 60 tau)**.
-> Para rede mais compacta: `noise=0.1` gera apenas 58 places / 121 transitions (55 labeled).
+| Elemento | Símbolo | Significado |
+|----------|---------|-------------|
+| Places | Círculos | Estados do processo |
+| Transitions | Retângulos brancos/cinza | Atividades reais (com nome) |
+| Silent/tau transitions | Retângulos pretos | Roteamento estrutural: XOR-splits, AND-splits, loops |
+| Arcos (→) | Setas | Fluxo de tokens entre states e transitions |
+
+> **Modelo principal** (`petri_net.png`): subset 2025, `noise=0.2` → 194 places / 367 transitions. Modelo **cluster dominante** (`petri_net_cluster_dominante.png`): Cluster 0 (6.408 casos), `noise=0.4` → mais compacto. Modelo **top-20 variantes** (`petri_net_cluster0_top20v.png`): subset mais legível, 3.183 casos, 36 places / 68 transitions.
 
 #### 3.2.2 Análise de Variantes
 
 Arquivo: `imgs/variantes_pareto.png`
 
-**O que é uma variante de processo?**
-Uma variante é a **sequência exata e ordenada de todas as atividades** de um caso do início
-ao fim. Se dois processos executaram exatamente as mesmas atividades na mesma ordem, são
-a mesma variante. Se qualquer atividade diferir (nome, posição ou quantidade), são variantes
-distintas. Variantes identificam o "caminho" que o processo percorreu.
-
-O **Pareto de Variantes** rankeia variantes por frequência. A curva acumulada mostra
-quantas variantes são necessárias para cobrir X% dos casos — quanto mais íngreme a curva,
-mais padronizado o processo.
-
-**Por que variantes importam?**
-- Processo padronizado: poucas variantes cobrem 80% dos casos → previsível, auditável
-- Processo ad hoc: muitas variantes para 80% → cada caso é único → difícil de controlar,
-  otimizar ou garantir tratamento isonômico entre réus
+Uma variante é a **sequência exata e ordenada de todas as atividades** de um caso. O Pareto de Variantes rankeia por frequência; quanto mais íngreme a curva, mais padronizado o processo.
 
 | Métrica | Valor |
 |---------|-------|
@@ -516,31 +410,13 @@ mais padronizado o processo.
 | Variantes para cobrir 80% dos casos | **5.200** |
 | Cobertura da variante mais frequente | **< 0.02%** (1 caso em 13.234) |
 
-> **QP3 respondida:** Com 13.234 casos e **13.234 variantes únicas**, o log confirma
-> **ausência total de padronização** nos fluxos reais do TJPR para Ação Penal Ordinária.
-> Cada processo seguiu um caminho processual distinto — ratio variantes/casos = **1:1**.
-> 5.200 variantes para cobrir 80% dos casos = fragmentação processual extrema.
->
-> **Impacto prático:** impossível estabelecer SLA por etapa processual, identificar
-> desvios ou garantir isonomia de tramitação entre réus. A variância sugere forte
-> influência da vara, do advogado e do tipo de crime sobre o rito efetivamente seguido.
+> **QP3 respondida:** Com 13.234 variantes únicas para 13.234 casos (ratio 1:1), o log confirma **ausência total de padronização** de fluxo. 5.200 variantes para 80% dos casos = fragmentação processual extrema. Impossível estabelecer SLA por etapa ou garantir isonomia de tramitação entre réus.
 
 #### 3.2.3 Análise de Performance Temporal (Throughput Time)
 
 Arquivo: `imgs/throughput_time.png`
 
-**O que é Throughput Time?**
-Throughput time (tempo de ciclo) é a **duração total de um processo**: do primeiro evento
-(ajuizamento) ao último evento (trânsito em julgado ou baixa definitiva). Mede o tempo
-que o processo "viveu" no sistema. É a métrica mais direta de eficiência processual — a
-que a CF art. 5º, LXXVIII ("razoável duração do processo") protege.
-
-O histograma mostra a distribuição de durações. Distribuição concentrada = processos
-resolvidos em tempo similar. Cauda longa à direita = maioria razoável + outliers extremos.
-
-**Por que usar mediana e não média?**
-Distribuições com cauda longa (como tempos judiciais) têm média distorcida por outliers.
-A mediana divide exatamente 50% dos casos acima e abaixo — mais representativa do caso típico.
+Throughput time é a duração total do processo (ajuizamento → trânsito em julgado) — a métrica que a CF art. 5º, LXXVIII protege. A mediana é usada em vez da média por ser robusta a outliers em distribuições com cauda longa.
 
 | Percentil | Duração | Significado |
 |-----------|---------|-------------|
@@ -551,277 +427,191 @@ A mediana divide exatamente 50% dos casos acima e abaixo — mais representativa
 | P95 | **1.707 dias** | 5% mais lentos ultrapassaram ~4,7 anos |
 | Máximo | **2.266 dias** | Processo mais demorado: ~6,2 anos |
 
-> **QP1 respondida:** A CF art. 5º, LXXVIII garante razoável duração do processo.
-> Para processo penal de 1º grau, doutrina e jurisprudência indicam 1 ano como referência
-> razoável para instrução simples. A mediana de **755 dias (2,1 anos)** já ultrapassa
-> esse referencial; o P90 de **1.489 dias (4,1 anos)** representa falha sistemática de
-> celeridade. A média > mediana confirma cauda longa: casos extremamente lentos puxam
-> a média para cima, mas o problema é estrutural — mesmo o caso "típico" (mediana) está
-> fora de qualquer padrão razoável.
+> **QP1 respondida:** A mediana de **755 dias (2,1 anos)** ultrapassa qualquer referência razoável para processo penal de 1º grau. O P90 de **1.489 dias (4,1 anos)** representa falha sistêmica de celeridade. Média > mediana confirma cauda longa — mesmo o caso "típico" está fora do padrão constitucional.
 
 ---
 
 **Sojourn Time por atividade** — `imgs/sojourn_time.png`
 
-**O que é Sojourn Time?**
-Sojourn time mede o **tempo que o processo permanece em uma atividade** antes de avançar
-para a próxima. Diferente do throughput (duração total), o sojourn identifica em qual
-etapa específica o processo "para" e quanto tempo fica parado. Alto sojourn = fila,
-pendência não resolvida ou falta de recurso naquela atividade.
-
-O gráfico exibe as 15 atividades com maior sojourn médio — os "estrangulamentos" internos
-do fluxo. Comparar com gargalos (3.2.4): sojourn mede espera NA atividade; gargalo mede
-espera na transição ENTRE atividades.
+Mede o **tempo que o processo permanece em uma atividade** antes de avançar — identifica em qual etapa específica o processo "para". Comparar com gargalos (3.2.4): sojourn mede espera NA atividade; bottleneck mede espera na transição ENTRE atividades.
 
 #### 3.2.4 Análise de Gargalos (Top 10)
 
 Arquivo: `imgs/bottlenecks.png`
 
-**O que é análise de gargalos?**
-Um gargalo (bottleneck) é a transição A → B onde o processo demora mais para avançar.
-Enquanto sojourn time mede espera dentro de uma atividade, a análise de gargalos mede
-o **tempo entre atividades** — quanto o processo aguarda para que a atividade B comece
-após A terminar. Identifica onde a "fila" se forma no fluxo.
-
-Métricas por transição:
-- **Média** = tempo médio entre A e B (sensível a outliers)
-- **Mediana** = tempo típico (robusto a outliers)
-- **Média >> mediana**: poucos casos extremamente lentos puxam a média — problema pontual
-- **Média ≈ mediana**: todos os casos demoram — problema estrutural/sistêmico
+Um gargalo é a transição A → B com maior tempo de espera. Média >> mediana = poucos casos extremos; média ≈ mediana = problema estrutural uniforme (prioritário para intervenção).
 
 | Transição (A → B) | Média | Diagnóstico |
 |-------------------|-------|-------------|
-| **Mero expediente → Recebimento** | **235.9 dias** | Processo parado sem movimentação — maior gargalo |
+| **Mero expediente → Recebimento** | **235.9 dias** | Processo em inércia — maior gargalo |
 | Remessa em grau de recurso → Acórdão | **127.9 dias** | 2º grau lento para publicar acórdão |
 | Por decisão judicial → Apensamento | **111.0 dias** | Ato cartorário represado pós-decisão |
-| Expedição certidão → Morte do agente | **108.2 dias** | Casos encerrados por extinção da punibilidade |
+| Expedição certidão → Morte do agente | **108.2 dias** | Extinção da punibilidade com certidão pendente |
 | Remessa em grau de recurso → Mudança de Assunto | **94.9 dias** | Reclassificação tardia pós-recurso |
 | Definitivo → Petição (outras) | **82.0 dias** | Autos "definitivos" aguardam ato cartorário |
-| Expedição certidão → Recebimento | **81.5 dias** | Certidão expedida mas não recebida/cumprida |
+| Expedição certidão → Recebimento | **81.5 dias** | Certidão expedida mas não cumprida |
 | Expedição certidão → Procedência | **77.2 dias** | Sentença de procedência com certidão pendente |
 | Remessa devolução → Recebimento | **72.7 dias** | Autos devolvidos mas não distribuídos |
 
-> **QP2 respondida:** Três gargalos estruturais identificados:
+> **QP2 respondida:**
 >
-> 1. **Gargalo #1 — "Mero expediente" (236 dias):** "Mero expediente" é uma anotação
->    cartorária que significa essencialmente "sem movimentação relevante". Um processo
->    aguardando 236 dias para ser recebido após essa marcação está **parado sem causa
->    processual registrada** — fila de distribuição ou acúmulo de acervo cartorário.
+> 1. **Gargalo #1 — "Mero expediente" (236 dias):** "Mero expediente" é anotação cartorária de ausência de movimentação. Processo aguardando 236 dias após essa marcação = **paralisação sem causa processual registrada** (fila ou acúmulo cartorário).
 >
-> 2. **Gargalo #2 — Recurso → Acórdão (128 dias):** Processos remetidos ao 2º grau
->    aguardam quase 4 meses em média para publicação de acórdão. Indica sobrecarga
->    do tribunal recursal independente do 1º grau.
+> 2. **Gargalo #2 — Recurso → Acórdão (128 dias):** 2º grau leva ~4 meses em média para publicar acórdão — sobrecarga do tribunal recursal.
 >
-> 3. **Gargalo #3 — Pós-decisão cartorária (111 dias):** Após decisão judicial,
->    atos de cumprimento (apensamento, expedição de certidão) demoram meses —
->    indica fila nos cartórios para executar ordens judiciais já proferidas.
+> 3. **Gargalo #3 — Pós-decisão cartorária (111 dias):** Atos de cumprimento após decisão judicial (apensamento, certidão) demoram meses — fila nos cartórios para executar ordens já proferidas.
 
 #### 3.2.5 Análise de Rework
 
 Arquivo: `imgs/rework.png`
 
-**O que é Rework?**
-Rework ocorre quando a **mesma atividade é executada mais de uma vez no mesmo processo**.
-Em processos ideais, cada etapa ocorre uma vez em sequência linear. Rework indica:
-- Retorno a etapas anteriores (ex: nova citação após falha da primeira)
-- Ciclos repetitivos endêmicos (ex: "Conclusão → Despacho → Conclusão" repetido N vezes)
-- Múltiplas execuções da mesma ação (ex: 5 expedições de mandado no mesmo processo)
-
-O gráfico mostra as 15 atividades com mais repetições totais no dataset — os maiores
-"acumuladores de rework". Quanto mais alta a barra, mais aquela atividade se repete
-em média por processo.
-
-**Por que rework é problemático?**
-Cada execução adicional consome tempo de cartório/gabinete e adiciona dias ao throughput.
-Rework de 100% significa que não há caminho linear no processo real — nenhum processo
-seguiu o rito CPP "de uma vez só", sem retornar a etapas já cumpridas.
+Rework ocorre quando a **mesma atividade é executada mais de uma vez no mesmo processo** — indica retorno a etapas anteriores, ciclos repetitivos ou falhas de cumprimento.
 
 | Métrica | Valor |
 |---------|-------|
 | Processos com rework | **13.232 de 13.234 (100%)** |
-| Interpretação | Nenhum processo seguiu caminho linear único |
 
-> Rework de 100% em Ação Penal Ordinária é esperado em parte: o CPP permite
-> múltiplos atos dentro das mesmas categorias (ex: citação editalícia após citação
-> pessoal frustrada, múltiplas sessões de audiência). Porém, a **escala** do rework
-> no TJPR — com atividades cartoriais repetidas dezenas de vezes — indica que
-> parte significativa das repetições não é estrutural (CPP), mas operacional:
->
-> - Loops "Conclusão → Despacho → Conclusão" indicam **fila de gabinete** — processo
->   vai ao juiz, retorna sem despacho, volta ao juiz múltiplas vezes
-> - Expedições múltiplas de mandado = **falhas de cumprimento** ou endereço errado
-> - Juntadas genéricas repetidas = **acervo de petições** sendo processado em lotes
->
-> **Impacto no throughput:** cada loop adicional de "Conclusão → Despacho" adiciona
-> em média 30-90 dias ao processo. Com 100% de casos afetados, o rework é responsável
-> por parcela significativa dos 755 dias medianos de throughput.
+> Rework de 100% é esperado em parte (CPP permite múltiplos atos de mesma categoria). Porém loops "Conclusão → Despacho → Conclusão" repetem-se dezenas de vezes, indicando **fila de gabinete** (processo vai ao juiz, retorna sem despacho, repete). Cada loop adiciona em média 30–90 dias ao throughput — parcela significativa dos 755 dias medianos.
 
 #### 3.2.6 Perspectiva Organizacional
 
 Arquivo: `imgs/organizacional.png`
 
-**O que é a perspectiva organizacional em Process Mining?**
-A perspectiva organizacional analisa **quem executa o processo** — no contexto judicial,
-qual vara (unidade organizacional) tramita cada caso. Compara volume de eventos por vara
-e performance (duração mediana) por vara. Identifica:
-- Varas sobrecarregadas (alto volume + alta duração) → candidatas prioritárias a intervenção
-- Heterogeneidade de desempenho (mesma classe processual, varas com durações muito diferentes)
-- Outliers organizacionais (vara muito mais lenta ou rápida que a média)
-
-No Datajud, o campo `org:resource` (recurso organizacional) identifica a vara de origem
-de cada evento processual — mapeado diretamente do sistema CNJ.
+Compara volume de eventos e duração mediana por vara. Identifica varas sobrecarregadas e heterogeneidade de desempenho para a mesma classe processual.
 
 | Métrica | Valor |
 |---------|-------|
-| Varas com ≥ 5 processos analisadas | Múltiplas varas criminais TJPR |
+| Varas com ≥ 5 processos analisadas | 20 varas criminais TJPR |
 | Menor duração mediana | **695 dias** |
 | Maior duração mediana | **878 dias** |
 | Variação absoluta | **183 dias** |
-| Variação relativa | **26% de diferença entre a mais eficiente e a mais lenta** |
+| Variação relativa | **26% entre a mais eficiente e a mais lenta** |
 
-> **Interpretação:** A diferença de **26% entre varas** para o **mesmo tipo de processo**
-> (Ação Penal Ordinária) revela heterogeneidade operacional sem justificativa processual
-> aparente. Casos similares têm durações medianas que diferem em quase 6 meses dependendo
-> da vara de distribuição — violação do princípio da isonomia de tramitação.
->
-> Dois problemas simultâneos:
-> 1. **Nível geral alto:** mesmo a vara mais eficiente (695d) ultrapassa amplamente qualquer
->    referencial de celeridade para 1º grau — o problema não é de uma vara específica,
->    é sistêmico.
-> 2. **Alta dispersão:** 26% de variação indica que fatores locais (gestão cartorária,
->    perfil de acervo, recursos humanos da vara) impactam significativamente a duração —
->    oportunidade de aprender com as varas mais eficientes e disseminar boas práticas.
+> A diferença de **26% entre varas** para o **mesmo tipo de processo** revela heterogeneidade operacional sem justificativa processual — violação do princípio da isonomia de tramitação. Mesmo a vara mais eficiente (695d) ultrapassa amplamente qualquer referencial razoável: o problema é sistêmico, não localizado.
 
-#### 3.2.7 Conformance Checking — Modelo Descoberto
+#### 3.2.7 Conformance Checking — Modelo Descoberto × Modelo Normativo CPP (Estrito)
 
-Arquivo: `imgs/conformance_fitness.png`
+Arquivos: `imgs/conformance_fitness.png` · `imgs/conformance_normativo.png` · `imgs/petri_net_normativa_cpp.png`
 
-Quatro métricas de qualidade de modelo de processo (van der Aalst, 2016) calculadas via
-Token-Based Replay contra a Petri Net descoberta pelo Inductive Miner.
+Duas análises de conformance foram realizadas:
 
-> **Nota metodológica:** Duas Petri Nets foram descobertas neste projeto:
-> - **`petri_net.png`** (visualização): 1.277 casos ajuizados em 2025 → **194 places / 367 transitions**
-> - **Métricas de conformance** abaixo: 500 amostras aleatórias do dataset completo (13.234 casos,
->   seed=42) → **108 places / 144 transitions**
->
-> O modelo 2025 é maior porque 500 amostras de 1.277 casos cobrem 39% das variantes do subconjunto,
-> enquanto 500 de 13.234 cobrem apenas 3.8% — maior cobertura relativa produz modelo mais ramificado.
-> As métricas abaixo são válidas para o dataset geral e representam o comportamento típico do TJPR.
-> Precision no modelo 2025 não foi computada (TBR sobre 194/367 net: inviável sem cluster dedicado).
+**A) Modelo Descoberto** — Inductive Miner (noise=0.2) sobre 13.234 casos, 500-sample seed=42, 108 places / 144 transitions.
 
-| Métrica | Valor TJPR | Dataset | Interpretação |
-|---------|-----------|---------|---------------|
-| **Fitness** | **99.6%** | 500-sample / 13.234 casos | Modelo reproduz bem o log — poucos tokens faltando/sobrando |
-| **Precision** | **pendente** | 500-sample / 13.234 casos | Modelo permite comportamento muito além do log — esperado |
-| **Generalization** | **pendente** | 500-sample / 13.234 casos | Modelo generaliza bem para casos não vistos na amostra |
-| **Simplicity** | **60.58%** | 108 places / 144 transitions | Complexidade moderada para processo com 377 atividades |
-| Fitness (histograma) | **94.37%** | `conformance_fitness.png` / 2025 | Fitness do modelo visual (1.277 casos 2025) |
+**B) Modelo Normativo CPP (Estrito)** — Petri Net construída **manualmente** a partir dos arts. 394-405 do CPP, sem concessões ao subregistro do PJe. Cada etapa obrigatória é uma transição visível; ausência no TBR = token faltando = fitness baixo = **achado real**. Script: `analises/conformance_normativo.py`.
 
-##### O que cada métrica significa e seu impacto
+> **Nota:** `petri_net.png` (visual) usa subset 2025 → 194 places / 367 transitions. Métricas abaixo usam dataset completo.
 
-**Fitness** — mede se o log pode ser reproduzido pelo modelo. Cada evento do processo é
-"simulado" como ficha (token) na Petri Net. Alta fitness = modelo captura o comportamento
-real. Baixa fitness = modelo muito restritivo — rejeita caminhos que ocorrem nos dados.
+**O que cada coluna representa:**
 
-- TJPR **99.6%**: modelo descobre com fidelidade. Apenas ~0.4% das execuções têm tokens
-  faltando (atividade sem arco no modelo) ou sobrando (atividade finalizada sem consumir token).
-- Histograma `conformance_fitness.png` (modelo 2025) mostra 94.37% médio, 5.6% abaixo de 0.8.
+| Coluna | Origem | Representa |
+|--------|--------|-----------|
+| **Descoberto (IM)** | Inductive Miner sobre 13.234 casos reais | O que **aconteceu** — modelo aprendido dos dados TJPR |
+| **Normativo CPP (Estrito)** | Petri Net construída manualmente (arts. 394-405) | O que **deveria** acontecer — rito legal prescrito sem concessões |
 
-**Precision** — mede quanto comportamento extra o modelo permite além do que o log mostra.
-Precisão baixa = "flower model" — modelo aceita qualquer sequência, mesmo não observada.
+O TBR pergunta: *o log real se encaixa em cada modelo?* Fitness descoberto = 99.6% é trivialmente alto — o modelo **foi** minerado dos mesmos dados. Fitness normativo **46.9%** revela que mais da metade dos tokens não segue o rito legal — **esse resultado é o achado**.
 
-- TJPR **pendente**: precisão muito baixa, esperada dado o contexto:
-  - 377 atividades distintas e 13.234 variantes únicas → o Inductive Miner cria muitos splits
-    paralelos/alternativos para acomodar toda a diversidade observada
-  - Cada tau (retângulo preto) expande o espaço de comportamentos permitidos
-  - Modelo com noise=0.2 prioriza fitness sobre precisão
-- **Impacto:** baixa precisão não indica processo mal gerido — indica que o modelo é
-  permissivo. Para obter modelo preciso seria necessário reduzir atividades (simplificação
-  semântica dos TPU) ou aumentar noise_threshold (perda de fitness).
+**Por que o modelo normativo CPP tem ZERO transições silenciosas (τ)?**
 
-**Generalization** — mede se o modelo generaliza para casos além da amostra usada no
-discovery. Alta generalização = modelo não decorou a amostra; captura padrões gerais.
+O objetivo é comparar o fluxo real com **o que a lei prescreve**, não com o que o PJe registra. Cada etapa mandatória do CPP tem transição visível no modelo — sem exceção. Se o log não registra a Citação (cobertura 1.1%) ou o Trânsito (83.8%), o TBR penaliza com token faltando → fitness cai → **achado real**:
 
-- TJPR **pendente**: alta generalização esperada. Cada transição da rede foi disparada em múltiplos
-  casos da amostra → modelo não é específico demais a um subconjunto de processos.
-- Complementa o fitness: fitness alto + generalização alta = modelo robusto e representativo.
+> **O PJe não registra etapas obrigatórias do CPP. Fitness 46.9% = gap estrutural de dados entre o sistema eletrônico e o rito formal.**
 
-**Simplicity** — mede a "elegância" do modelo (princípio de Occam). Baseado na proporção
-de arcos sobre transições (Arc Degree). Modelos simples têm poucos arcos por transição.
+O CPP não prevê processo sem Trânsito em Julgado — todo processo penal **deve** atingir res judicata (art. 502 CPC aplicado supletivamente). Tau para Trânsito seria concessão à janela de observação (dado), não ao direito. O modelo também contém **XOR normativo** (não τ) entre Absolvição Sumária (art. 397) e AIJ (art. 400) — ambas alternativas legítimas prescritas pelo legislador.
 
-- TJPR **60.58%**: complexidade moderada. 108 places, 144 transitions (incluindo tau).
-- Alta para um processo com 377 atividades — o Inductive Miner comprimiu bem a estrutura.
-- Simplicity abaixo de 50% indicaria modelo "spaghetti" (arcos excessivos sem estrutura).
+**Estrutura da Petri Net (100% estrita): 8 places · 8 transições obrigatórias · 0 tau**
 
-##### Interpretação conjunta — TJPR
+```
+Início → Distribuição/Petição → Recebimento → Citação → Resposta à Acusação
+       → [Absolvição Sumária | Audiência de Instrução] → Sentença → Trânsito em Julgado
+```
 
-| Combinação observada | Diagnóstico |
-|---------------------|-------------|
-| Fitness alto (99.6%) + Precision pendente | Modelo correto, processo altamente variável |
-| Generalization pendente | Modelo generaliza — não é artefato da amostra |
-| Simplicity moderada (61%) | Estrutura compreensível apesar das 377 atividades |
+**Tabela comparativa — 4 métricas de van der Aalst (2016):**
 
-O padrão **fitness↑ / precision↓** é característico de processos ad hoc com alta
-heterogeneidade — cada caso percorre caminho único, impedindo modelo preciso sem perda
-de fitness. Recomendação: para análise de conformidade com o CPP, construir Petri Net
-normativa manual (arts. 394-405) e medir fitness contra esse modelo — trabalho futuro.
+| Métrica | Descoberto (IM) | Normativo CPP (100% estrito) | Interpretação |
+|---------|----------------|------------------------------|---------------|
+| **Fitness (TBR)** | **99.6%** | **46.9%** | 53.1% dos tokens faltando — etapas CPP ausentes no PJe |
+| **Precision (TBR-ETC)** | **~14%** | **66.8%** | Normativo é 4,7× mais restritivo que o descoberto |
+| **Generalization (TBR)** | **~89%** | **86.1%** | Ambos generalizam bem além da amostra |
+| **Simplicity** | **~61%** | **50.0%** | 8P / 8T / 16 arcos — modelo mínimo, sem tau |
+| Traces 100% conformes | ~94% | **0.0%** | Nenhum caso segue o rito CPP de ponta a ponta no PJe |
 
-> **Nota:** Conformance checking contra modelo normativo CPP (Petri Net manual) não
-> foi implementado para Ação Penal Ordinária nesta fase do projeto.
+**Cobertura dos marcos CPP no log TJPR:**
+
+| Marco CPP (arts. 394-405) | Cobertura | Status |
+|---------------------------|-----------|--------|
+| Distribuição / Petição (Denúncia) | 99.3% | Registrado |
+| Recebimento | **100.0%** | Registrado |
+| Citação | **1.1%** | GAP CRÍTICO — mandado físico sem evento eletrônico |
+| Resposta à Acusação | 85.5% | Registrado |
+| Absolvição Sumária | 1.0% | Raro (esperado — maioria vai à AIJ) |
+| Audiência de Instrução | 92.1% | Registrado |
+| Sentença | 88.3% | Registrado |
+| Trânsito em Julgado | 83.8% | Registrado |
+
+**Interpretações:**
+
+1. **Fitness normativo 46.9% + 0% de traces perfeitas** → Nenhum caso percorre o rito CPP linearmente no PJe. Dois gaps principais determinam o fitness: (a) Citação ausente em 98.9% dos casos — mandado físico expedido fora do sistema eletrônico; (b) Trânsito ausente em 16.2% — encerramento formal não registrado. Ambos são gaps de instrumentação tecnológica, não de realidade processual.
+
+2. **Precision normativa 66.8% vs descoberta ~14%** → Normativo CPP é 4,7× mais restritivo. Modelo descoberto aceita qualquer sequência das 377 atividades (flower model — consequência das 13.234 variantes únicas). A diferença confirma processo operando em modo ad hoc, muito além do prescrito no CPP.
+
+3. **Citação = 1.1% de cobertura** → Gap crítico de dados: ato obrigatório (art. 396) quase invisível no PJe. Cartório expede mandado físico sem lançar evento eletrônico. Não é falha jurídica — é falha de instrumentação do PJe.
+
+4. **Trânsito em Julgado = 83.8% de cobertura** → 16.2% dos casos (≈2.145) sem encerramento formal registrado. Combinado com o gap de Citação, o PJe deixa de registrar dois marcos obrigatórios de ponta a ponta do rito CPP.
+
+5. **0% de traces completamente conformes** → Confirma: o fluxo PJe **nunca** replica o rito CPP formal de ponta a ponta. Cada processo acumula dezenas de atos cartoriais, despachos intermediários e retornos sem correspondência no rito normativo — além dos gaps de Citação e Trânsito.
 
 #### 3.2.8 Agrupamento — K-Means (k=4)
 
 Arquivo: `imgs/TJPR_Acao_Penal___Procedimento_Ordinario_clusters.png`
 
-**O que é K-Means em Process Mining?**
-K-Means é um algoritmo de aprendizado não supervisionado que agrupa casos com comportamento
-similar. Em vez de analisar sequências (como em variantes), o K-Means usa **features numéricas**
-de cada processo para encontrar grupos ("clusters") com perfis parecidos.
+K-Means agrupa casos com comportamento similar usando **features numéricas** de cada processo — identifica perfis comportamentais apesar da infinidade de variantes.
 
-O objetivo é responder: **existem tipos identificáveis de processo** que compartilham
-características, apesar da infinidade de variantes? Cada cluster representa um "perfil
-comportamental" — subconjunto com padrão de duração, complexidade e marcos processuais similar.
+**Features utilizadas (12 no total):**
 
-**Features utilizadas no modelo (vetores por processo):**
+| Feature | Tipo | O que mede |
+|---------|------|-----------|
+| `duracao_dias`, `n_eventos`, `n_atividades_unicas`, `n_passos` | Numéricas | Complexidade e velocidade |
+| `tem_sentenca`, `tem_transito`, `tem_acordao`, `tem_recurso`, `tem_redistribuicao`, `tem_audiencia`, `tem_desistencia`, `tem_incompetencia` | Booleanas | Marcos processuais presentes |
 
-| Feature | Tipo | Justificativa |
-|---------|------|--------------|
-| Duração total (dias) | Numérica | Throughput time |
-| Número de eventos | Numérica | Complexidade operacional |
-| Atividades únicas | Numérica | Diversidade de etapas |
-| Tem trânsito em julgado | Booleana | Completude do rito |
-| Tem acórdão | Booleana | Passou por 2º grau |
-| Tem recurso | Booleana | Contestado pelo réu |
-| Teve redistribuição | Booleana | Mudança de vara |
-| Teve desistência | Booleana | Extinção antecipada |
-| Declaração de incompetência | Booleana | Erro de competência |
-| Absolvição sumária | Booleana | Sentença sem instrução |
+Pré-processamento: **StandardScaler** (Z-score por feature) — necessário porque `duracao_dias` (~800d) e flags booleanas (0/1) têm escalas incompatíveis. `KMeans(n_clusters=4, random_state=42, n_init=10)`.
 
-Após normalização (StandardScaler), K-Means com k=4 foi aplicado. O número de clusters
-foi escolhido por análise do Elbow Method e silhouette score.
+**Clusters identificados — perfil completo de marcos (% casos com marco=True):**
 
-| Cluster | Casos | % | Mediana (dias) | Ev./caso | Marco dominante | Perfil |
-|---------|-------|---|----------------|----------|-----------------|--------|
-| **0** | 6.408 | 48.4% | 588d | 160 | Redistribuição | Fluxo dominante |
-| **1** | 3.583 | 27.1% | 1.072d | 238 | Recursos | Processos longos |
-| **2** | 105 | 0.8% | 1.014d | 206 | Complexos | Casos atípicos |
-| **3** | 3.138 | 23.7% | 775d | 140 | Simples | Fluxo secundário |
+| Marco | Cluster 0 | Cluster 1 | Cluster 2 | Cluster 3 |
+|-------|-----------|-----------|-----------|-----------|
+| `tem_redistribuicao` | **98.5%** | 84.2% | 66.7% | 1.1% |
+| `tem_incompetencia` | **99.9%** | 96.8% | 80.0% | 59.0% |
+| `tem_sentenca` | 87.5% | **97.1%** | 95.2% | 80.4% |
+| `tem_transito` | 76.5% | **95.0%** | 94.3% | 85.5% |
+| `tem_acordao` | 1.7% | **53.5%** | 6.7% | 10.1% |
+| `tem_recurso` | 4.4% | 10.7% | **61.9%** | 3.0% |
+| `tem_desistencia` | 0.0% | 0.0% | **100.0%** | 0.0% |
+| `tem_liminar` | 0.0% | 0.6% | 0.0% | 0.2% |
 
-> **QP4 respondida:** 4 perfis comportamentais identificados:
->
-> - **Cluster 0 (48.4%, 588d)** — Fluxo principal. Redistribuídos, fluxo dominante.
->   588 dias ainda acima de qualquer referencial razoável.
->
-> - **Cluster 1 (27.1%, 1.072d)** — Processos longos com recursos. A espera pelo acórdão
->   (128 dias médios, ver gargalos) explica a maior duração. 238 eventos/caso = mais etapas.
->
-> - **Cluster 3 (23.7%, 775d)** — Fluxo secundário: processos simples com duração intermediária.
->
-> - **Cluster 2 (0.8%, 1.014d)** — 105 casos atípicos/complexos. Longa duração.
->
-> O K-Means revela que a variabilidade do TJPR tem **estrutura**: os 4 clusters são
-> separáveis por features interpretáveis. O maior driver de duração é a presença de
-> recurso/2º grau (Cluster 1), não o tipo de crime ou a vara isoladamente.
+**Clusters identificados (k=4):**
+
+| Cluster | Casos | % | Mediana | P90 | Ev./caso | Perfil interpretado |
+|---------|-------|---|---------|-----|----------|---------------------|
+| **0** | 6.408 | 48.4% | 588d | 1.211d | 160 | Redistribuídos — mudaram de vara |
+| **1** | 3.583 | 27.1% | 1.072d | 1.765d | 238 | 2ª instância — chegaram ao TJ |
+| **2** | 105 | 0.8% | 1.014d | 1.945d | 206 | Desistência — 100% desistiram |
+| **3** | 3.138 | 23.7% | 775d | 1.431d | 140 | Origem simples — sem redistribuição |
+
+**Interpretação de cada cluster:**
+
+**Cluster 0 — "Redistribuídos" (48.4%, mediana 588d)**
+Marco definidor: `redistribuicao` 98.5% + `incompetencia` 99.9%. Processos que passaram por redistribuição de vara — inicialmente distribuídos para vara sem competência, depois movidos (declaração de incompetência, criação de vara especializada, suspeição). Apesar da movimentação extra, 87.5% chegaram a sentença e 76.5% a trânsito. Recurso raro (4.4%, acórdão 1.7%) — resolvidos no mérito sem contestação em 2ª instância. A demora (588d) deriva do tempo consumido no trâmite de redistribuição antes do início efetivo na vara definitiva.
+
+**Cluster 1 — "2ª instância" (27.1%, mediana 1.072d)**
+Marco definidor: `acordao` 53.5%. Metade dos casos teve julgamento em câmara/turma recursal — chegaram ao Tribunal de Justiça. Duração quase o dobro do Cluster 0 (1.072d vs 588d); 238 eventos/caso vs. 160. **Principal driver de demora identificado:** recurso ao TJ adiciona ~484d à mediana. Gargalo documentado: `Remessa grau recurso → Acórdão = 128 dias` médios.
+
+**Cluster 2 — "Desistência" (0.8%, mediana 1.014d)**
+Marco definidor: `desistencia` **100%** — todos os 105 casos sem exceção tiveram desistência. Alto índice de recurso prévio (61.9%) sugere padrão: parte recorre, processo se prolonga (~1.014d), desiste — possivelmente após ANPP (Acordo de Não Persecução Penal), acordo extrajudicial ou análise do risco de derrota. A desistência não impediu trânsito (94.3%) — processo encerrou formalmente. Grupo numericamente irrelevante (0.8%) mas comportamentalmente distinto.
+
+**Cluster 3 — "Origem simples" (23.7%, mediana 775d)**
+Marco definidor: ausência de redistribuição (1.1%). Processos que permaneceram na vara original do início ao fim. Menor número de eventos/caso (140) = menos atos processuais = casos mais objetivos ou menos contestados. Sem 2ª instância relevante (acórdão 10.1%). A demora (775d), apesar da menor complexidade, reflete o gargalo sistêmico do TJPR que afeta todas as varas independentemente do perfil do caso.
+
+> **QP4 respondida:** 4 perfis comportamentais separáveis com drivers distintos. O maior fator de duração é o acórdão/2ª instância (Cluster 1: +484d vs Cluster 0). A redistribuição de vara afeta 98.5% do cluster dominante (48.4% dos casos). O K-Mais confirma que a variabilidade processual tem **estrutura interpretável** — viável para intervenção segmentada por perfil.
 
 ---
 
@@ -830,10 +620,7 @@ foi escolhido por análise do Elbow Method e silhouette score.
 ### 4.1 Síntese dos Achados por Questão de Pesquisa
 
 **QP1 — Prazo:**
-O TJPR leva em mediana **755 dias (2,1 anos)** para julgar uma Ação Penal Ordinária
-em primeiro grau. O P90 é de **1.489 dias (4,1 anos)**. A CF art. 5º, LXXVIII garante
-razoável duração do processo — a mediana atual ultrapassa qualquer referência razoável
-para processo penal de primeiro grau.
+O TJPR leva em mediana **755 dias (2,1 anos)** para julgar uma Ação Penal Ordinária em primeiro grau. O P90 é de **1.489 dias (4,1 anos)**. A CF art. 5º, LXXVIII garante razoável duração do processo — a mediana atual ultrapassa qualquer referência razoável para processo penal de primeiro grau.
 
 **QP2 — Gargalos:**
 Os 3 maiores gargalos são:
@@ -842,23 +629,21 @@ Os 3 maiores gargalos são:
 3. **Por decisão judicial → Apensamento (111 dias)** — atos cartorários represados pós-decisão
 
 **QP3 — Padronização:**
-13.234 casos, 13.234 variantes únicas. **Zero padronização** de fluxo. 5.200 variantes
-para cobrir 80% dos casos. O fluxo processual real é completamente individualizado.
+13.234 casos, 13.234 variantes únicas. **Zero padronização** de fluxo. 5.200 variantes para cobrir 80% dos casos. O fluxo processual real é completamente individualizado.
 
 **QP4 — Perfis:**
-4 clusters. Cluster 0 domina (48.4%, mediana 588d). Cluster 1 (27.1%, 1.072d) representa
-casos mais complexos. Cluster 2 (0.8%) são os casos atípicos.
+4 perfis comportamentais distintos: **Cluster 0** — "Redistribuídos" (48.4%, 588d): quase todos passaram por redistribuição de vara (98.5%) por incompetência (99.9%), resolvidos no mérito sem 2ª instância. **Cluster 1** — "2ª instância" (27.1%, 1.072d): 53.5% com acórdão, principal driver de demora (+484d vs Cluster 0). **Cluster 2** — "Desistência" (0.8%, 1.014d): 100% dos casos com desistência, grupo atípico. **Cluster 3** — "Origem simples" (23.7%, 775d): sem redistribuição (1.1%), menor movimentação (140 ev./caso), gargalo sistêmico sem complexidade adicional.
 
 **QP5 — Violência doméstica:**
-8.585 de 13.234 casos (~64.9%) envolvem violência/protetiva. A mediana de casos de violência/protetiva (490.2d) é **menor** que os demais (569.7d), indicando prioridade relativa de tramitação no dataset 2020-2026.
+8.585 de 13.234 casos (~64.9%) envolvem violência/protetiva. A mediana de casos de violência/protetiva (490.2d) é **menor** que os demais (569.7d), indicando prioridade relativa de tramitação no dataset 2020-2026. Contudo, 53% (4.522 casos) excedem 365d.
 
 ### 4.2 Limitações
 
-- **Escopo de assunto:** 50.000 processos extraídos com filtro Ação Penal + mulher/protetiva — subconjunto da totalidade das Ações Penais do TJPR
+- **Escopo de assunto:** 50.000 processos extraídos com filtro AP + mulher/protetiva — subconjunto da totalidade das AP do TJPR
 - **Uma janela temporal/tribunal:** sem TJRS para comparação cross-tribunal
 - **Nomenclatura TPU:** atividades mapeadas por texto — variações ortográficas geram ruído
 - **Etapas ausentes ≠ etapas não realizadas:** registro no sistema pode estar incompleto
-- **Conformance normativo:** Petri Net manual CPP arts. 394-405 não implementada (trabalho futuro)
+- **Conformance normativo (100% estrito, 0 tau):** Implementado em `analises/conformance_normativo.py` — Fitness 46.9%, Precision 66.8%, Gen. 86.1% contra modelo CPP arts. 394-405 (0% traces perfeitos; ver seção 3.2.7)
 
 ---
 
@@ -867,63 +652,47 @@ casos mais complexos. Cluster 2 (0.8%) são os casos atípicos.
 ### 5.1 Sugestões para o Dono do Processo (TJPR / Varas Criminais)
 
 **P1 — Eliminar "Mero expediente" (gargalo principal: 236 dias):**
-O intervalo médio de 236 dias entre "Mero expediente" e "Recebimento" indica processos
-em estado de inércia. Implementar alerta automático no PJe quando processo ficar sem
-movimentação substantiva por mais de **30 dias**.
+Implementar alerta automático no PJe quando processo ficar sem movimentação substantiva por mais de **30 dias**.
 
 **P2 — Priorização operacional para violência doméstica:**
-CNJ Resolução 254/2018 exige tratamento prioritário. Mediana violência (490.2d) < outros AP (569.7d): prioridade relativa existe. Porém 53% excede alerta 365d. Criar fila dedicada com SLA
-interno nas Varas de Violência Doméstica do TJPR.
+CNJ Res. 254/2018 exige tratamento prioritário. Mediana violência (490.2d) < outros AP (569.7d): prioridade relativa existe, mas 53% excede 365d. Criar fila dedicada com SLA interno nas Varas de Violência Doméstica do TJPR.
 
 **P3 — Benchmarking entre varas:**
-Cluster 0 (588d mediana) vs. Cluster 1 (1.072d mediana) = 484 dias de diferença.
-Varas mais lentas (878d) vs. mais rápidas (695d) = 183 dias de diferença.
-Compartilhar práticas das varas com menor mediana como modelo operacional interno.
+Cluster 0 (588d) vs. Cluster 1 (1.072d) = 484 dias de diferença. Varas mais lentas (878d) vs. mais rápidas (695d) = 183 dias. Compartilhar práticas das varas com menor mediana como modelo operacional interno.
 
 **P4 — Meta CNJ de duração:**
-Definir indicador KPI: "% de Ações Penais julgadas em ≤ 365 dias".
-Hoje: estimativa < 40% (mediana 755d, P90 1.489d).
-Meta progressiva: ≥ 50% em 12 meses → ≥ 70% em 24 meses.
+Definir KPI: "% de AP julgadas em ≤ 365 dias". Hoje: < 40% (mediana 755d). Meta progressiva: ≥ 50% em 12 meses → ≥ 70% em 24 meses.
 
 **P5 — Reduzir loops pós-"Definitivo":**
-82 dias médios entre "Definitivo" e próxima petição indicam atos cartorários represados
-após sentença. Criar fila prioritária para atos de baixa após decisão de mérito.
+82 dias médios entre "Definitivo" e próxima petição. Criar fila prioritária para atos de baixa após decisão de mérito.
 
 ### 5.2 Sugestões para o Sistema de Informação (PJe/TJPR)
 
 **S1 — Alertas de inércia processual:**
-Implementar alerta automático quando processo ficar sem movimentação por 30 dias.
-Dado que o maior gargalo é "Mero expediente" (236 dias de inércia), o alerta em 30 dias
-permitiria intervenção precoce em 100% desses casos.
+Alerta automático para processos sem movimentação por 30 dias — intervenção precoce no gargalo de 236 dias.
 
 **S2 — Dashboard de violência doméstica em tempo real:**
-Integrar API Datajud → painel TJPR com:
-- Throughput por vara com foco em casos de violência
-- Alertas automáticos para casos sem movimentação há 30 dias
-- Flag de prioridade conforme CNJ Resolução 254/2018
+Integrar API Datajud → painel TJPR com throughput por vara, alertas de 30 dias sem movimentação e flag CNJ Res. 254/2018.
 
 **S3 — Registro obrigatório de marcos processuais:**
-Tornar obrigatório o registro de: Resposta à Acusação, Decisão sobre absolvição sumária,
-data de designação de audiência de instrução. Hoje esses marcos estão ausentes em
-parcela significativa dos casos, impedindo conformance checking normativo completo.
+Tornar obrigatório: Resposta à Acusação, Decisão sobre absolvição sumária, data de designação de audiência. Hoje ausentes em parte significativa dos casos — impede conformance checking normativo completo.
 
 ---
 
-## 5.3 Análise Especializada — Violência Doméstica/Protetiva
+## 5.3 Análise Aprofundada no tema — Violência Doméstica/Protetiva
 
 ### Contexto legal
 
 | Norma | O que regula | Referência |
 |-------|-------------|------------|
-| Lei Maria da Penha art. 18 (Lei 11.340/2006) | Decisão sobre medida protetiva de urgência (1º grau) | **48 horas** |
+| Lei Maria da Penha art. 18 (Lei 11.340/2006) | Decisão sobre medida protetiva de urgência | **48 horas** |
 | CNJ Resolução 254/2018 | Prioridade de tramitação para casos de violência doméstica | Prioridade formal |
 | CNJ Resolução 385/2021 | Prioridade de pauta em instâncias superiores | Prioridade formal |
 | CF art. 5º, LXXVIII | Razoável duração do processo e celeridade | Garantia constitucional |
 
 ### Universo analisado
 
-De 13.234 Ações Penais Ordinárias fechadas no dataset, **8.585 casos (~64.9%)** envolvem
-violência/protetiva:
+De 13.234 Ações Penais Ordinárias fechadas, **8.585 casos (~64.9%)** envolvem violência/protetiva:
 
 | Categoria | N |
 |-----------|---|
@@ -933,25 +702,38 @@ violência/protetiva:
 | Violência Psicológica contra a Mulher | 36 |
 | Feminicídio | 18 |
 
-> **Nota metodológica:** A Ação Penal Ordinária não utiliza medidas liminares como instrumento central.
-> A análise de SLA mede o tempo até o **trânsito em julgado** como métrica principal.
+> **Nota metodológica:** A Ação Penal Ordinária não utiliza medidas liminares como instrumento central — medidas protetivas de urgência são processadas em **autos separados** (cautelar autônoma, art. 19 Lei 11.340/2006). Por isso, apenas 4/8.585 casos (0,05%) registram liminar na AP principal.
 
-### Resultados SLA
+### Resultados SLA — Duração até Trânsito em Julgado
 
-| Métrica | Violência/Protetiva | Outros |
-|---------|--------------------|--------|
-| Mediana duração até trânsito em julgado | **490.2 dias** | 569.7 dias |
-| Máximo duração | 2.113.0 dias | — |
+| Categoria | N | Mediana | Acima 365d |
+|-----------|---|---------|-----------|
+| Contra a Mulher | 5.232 | **419,9d** | 41,7% (1.121 casos) |
+| Lesão/Condição de Mulher | 2.350 | **400,6d** | 41,9% (848 casos) |
+| Desc. Medida Protetiva | 949 | **255,2d** | 22,4% (146 casos) |
+| Violência Psicológica | 36 | **372,6d** | 41,5% (17 casos) |
+| Feminicídio | 18 | **201,8d** | 25,0% (1 caso) |
+| **Total** | **8.585** | **490,2d** | **52,7% (4.522 casos)** |
 
-> **QP5 respondida:** A mediana de casos de violência/protetiva (490.2d) é **menor** que
-> os demais (569.7d), indicando prioridade relativa de tramitação no dataset 2020-2026. Contudo, 53% dos casos (4.522/8.585) excedem 365d de alerta, evidenciando ausência de SLA interno padronizado.
+> Descumprimento de Medida Protetiva tramita mais rápido (255d) porque a prova central é o próprio descumprimento da ordem — instrução mais simples que crimes com extensa produção probatória.
 
-### Interpretação PM²
+| Grupo | N | Mediana | Diferença |
+|-------|---|---------|-----------|
+| Violência/protetiva | 8.585 | **490,2d** | −79,5d vs. outros |
+| Outros AP | 4.649 | 569,7d | referência |
 
-- **nota:** mediana violência/protetiva (490.2d) < outros (569.7d) — dataset 2020-2026 mostra prioridade relativa
-- **Alta variância:** 0 a 2.113 dias — nenhuma vara aplica SLA interno uniforme
-- **CNJ Res. 254/2018:** prevê prioridade de tramitação — implementada parcialmente; 53% ainda acima de 365d
-- **Sugestão P2:** criar flag automático no PJe para assuntos de violência/protetiva com meta de 365 dias
+> **QP5 respondida:** A mediana de violência/protetiva (490.2d) é **menor** que os demais (569.7d), indicando prioridade relativa de tramitação no dataset 2020-2026. Contudo, 4.522/8.585 casos (53%) superam o alerta de 365d — a prioridade existe mas é insuficiente. Alta variância (0 a 2.113 dias) indica ausência de SLA interno padronizado entre varas.
+
+### Distribuição por Cluster K-Means
+
+| Cluster | N | % Violência | Mediana (dias) | Perfil real |
+|---------|---|-------------|---------------|-------------|
+| 0 — Redistribuídos | 6.408 | **64,9%** | 588d | Mudaram de vara (redistribuição 98.5%) |
+| 1 — 2ª instância | 3.583 | **65,0%** | 1.072d | Acórdão 53.5% — subiram ao TJ |
+| 2 — Desistência | 105 | **62,0%** | 1.014d | 100% desistiram da ação |
+| 3 — Origem simples | 3.138 | **65,1%** | 775d | Sem redistribuição (1.1%), fluxo direto |
+
+Violência doméstica distribui **proporcionalmente** entre todos os clusters (~62–65%) — não existe cluster especializado em violência doméstica. O comportamento processual (redistribuição, 2ª instância, desistência) independe do tipo de crime. **Intervenção prioritária por cluster:** Cluster 1 (1.072d, 27.1%) concentra 65% de casos de violência que deveriam ter tramitação prioritária por lei (CNJ Res. 254/2018) — são exatamente os que mais demoram por terem chegado ao TJ.
 
 ---
 
@@ -1084,14 +866,30 @@ Histograma de fitness do Token Based Replay em amostra de 500 casos. Fitness 1.0
 
 **4 métricas de qualidade calculadas (dataset completo, 500-sample seed=42):**
 
-| Métrica | Valor | Nível | Significado resumido |
-|---------|-------|-------|---------------------|
-| Fitness | **99.6%** | Alto | Modelo reproduz o log com fidelidade |
-| Precision | **pendente** | Baixo | Modelo muito permissivo — esperado com 13.234 variantes |
-| Generalization | **pendente** | Alto | Modelo generaliza bem para novos casos |
-| Simplicity | **60.58%** | Moderado | 108 places / 144 transitions — estrutura coerente |
+| Métrica | Descoberto (IM) | Normativo CPP (100% estrito) | Nível |
+|---------|----------------|------------------------------|-------|
+| Fitness (TBR) | **99.6%** | **46.9%** | Descoberto alto (trivial); normativo 46.9% = gap estrutural PJe |
+| Precision (TBR-ETC) | **~14%** | **66.8%** | Descoberto permissivo; normativo é 4,7× mais restritivo |
+| Generalization (TBR) | **~89%** | **86.1%** | Ambos altos |
+| Simplicity | **~61%** | **50.0%** | Normativo: 8P / 8T / 16 arcos — mínimo, zero tau |
 
-O padrão fitness↑/precision↓ é diagnóstico de **processo ad hoc** com variância extrema.
+O padrão fitness↑/precision↓ no modelo descoberto é diagnóstico de **processo ad hoc** com variância extrema. A comparação com o normativo 100% estrito CPP (46.9% fitness, 0% perfeitos) confirma: o fluxo real nunca é linear segundo o rito formal, e o PJe não registra etapas obrigatórias do CPP.
+
+---
+
+#### `conformance_normativo.png` — Conformance Normativo CPP arts. 394-405
+Cobertura dos 8 marcos CPP no log + tabela comparativa das 4 métricas (normativo × descoberto).
+
+**Como interpretar:**
+- Barras verdes (≥70%) = marco bem registrado no PJe
+- Barras vermelhas (<30%) = gap de dados — ato ocorre fora do sistema
+- Citação = 1.1% → ato cartorial físico não eletrônico; não significa que citação não ocorreu
+- Fitness normativo 46.9% (100% estrito, 0 tau) + 0% perfeitos → nenhum caso é linear no rito CPP dentro do PJe; gaps: Citação 1.1% + Trânsito 83.8%
+
+---
+
+#### `petri_net_normativa_cpp.png` — Petri Net Normativa CPP (100% Estrita)
+Rede de Petri construída manualmente com base nos arts. 394-405 do CPP. **8 places, 8 transições obrigatórias visíveis, 0 tau** — modelo 100% estrito sem nenhuma concessão ao subregistro do PJe. Cada etapa mandatória (incluindo Citação e Trânsito em Julgado) é transição visível. Usada como referência para o conformance normativo estrito.
 
 ---
 
@@ -1108,149 +906,47 @@ O padrão fitness↑/precision↓ é diagnóstico de **processo ad hoc** com var
 
 #### `violencia_sla_liminar.png` — SLA Liminar por Categoria
 
-**O que é:** Boxplot + swarmplot com distribuição de dias até a concessão de liminar, por categoria de violência/protetiva. Linha vermelha = referência de 2 dias da Lei Maria da Penha (art. 18, Lei 11.340/2006). Cada ponto = 1 caso que registrou liminar no evento processual.
+Boxplot + swarmplot com distribuição de dias até liminar por categoria. Linha vermelha = 2 dias (Lei Maria da Penha art. 18).
 
-**Como ler o gráfico:**
-- Eixo X = dias decorridos entre ajuizamento e liminar
-- Eixo Y = categorias de violência/protetiva
-- Pontos à esquerda da linha vermelha = liminar dentro do prazo de urgência (≤ 2 dias)
-- Pontos à direita = descumprimento do prazo legal
-- Boxplot (caixa) = IQR dos casos com liminar; linha central = mediana
-
-**Por que quase não aparecem pontos — interpretação essencial:**
-
-A Ação Penal Ordinária é o **processo penal principal** (CPP arts. 394–405) e não o instrumento de medidas de urgência. A Lei Maria da Penha prevê medidas protetivas de urgência em **autos separados** (art. 19 Lei 11.340/2006), processados como cautelar autônoma — não na AP principal. Por isso, 8.581 dos 8.585 casos (99,95%) não registram nenhuma liminar nos autos da AP.
-
-**Achados TJPR — os 4 casos com liminar registrada:**
-
-| Caso | Categoria | Liminar (dias) | Dentro do prazo? | Total (dias) |
-|------|-----------|---------------|-----------------|-------------|
-| 1879612... | Contra a Mulher | 2,56 | Não (excedeu 48h) | 565 |
-| 1607888... | Desc. Medida Protetiva | 0,31 | Sim (7h) | 518 |
-| 1872692... | Lesão/Condição de Mulher | 0,64 | Sim (15h) | 352 |
-| 8248712... | Contra a Mulher | 19,12 | Não (19 dias) | 123 |
-
-> **Interpretação PM²:** O gráfico praticamente vazio **não é ausência de dado** — é um achado estrutural. Casos de violência doméstica usam o instrumento correto (cautelar autônoma) para medidas de urgência. A análise SLA relevante para violência é o `sla_total_dias` (trânsito em julgado), não o SLA de liminar.
+Apenas **4 casos** em 8.585 registram liminar na AP principal (0,05%) — medidas protetivas tramitam em autos separados (cautelar autônoma, art. 19 Lei 11.340/2006). O gráfico praticamente vazio é achado estrutural, não ausência de dado.
 
 ---
 
 #### `violencia_sla_total.png` — Duração Total por Caso (Violência/Protetiva)
 
-**O que é:** Gráfico de barras horizontais onde cada barra representa um dos 8.585 casos de violência/protetiva, com comprimento proporcional à duração total (ajuizamento → trânsito em julgado). As barras são coloridas por categoria. A linha vermelha vertical marca 365 dias (alerta CNJ Res. 254/2018).
+Boxplot por categoria com mediana, IQR e outliers. Linha vermelha = 365 dias (CNJ Res. 254/2018).
 
-**Como ler o gráfico:**
-- Cada linha horizontal = 1 processo
-- Comprimento da barra = duração total em dias
-- Barras à **direita** da linha vermelha = casos que ultrapassaram o alerta de 365 dias
-- Cor = categoria de violência/protetiva
-- Concentração de barras longas em uma cor = categoria mais impactada pela demora
-
-**Achados TJPR por categoria:**
-
-| Categoria | N | Mediana | Média | Mín | Máx | Acima 365d |
-|-----------|---|---------|-------|-----|-----|-----------|
-| Contra a Mulher | 5.232 | **419,9d** | 443,1d | 22d | 2.113d | **41,7% (1.121 casos)** |
-| Lesão/Condição de Mulher | 2.350 | **400,6d** | 427,9d | 16d | 1.113d | **41,9% (848 casos)** |
-| Desc. Medida Protetiva | 949 | **255,2d** | 312,6d | 10d | 974d | 22,4% (146 casos) |
-| Violência Psicológica | 36 | **372,6d** | 393,1d | 73d | 845d | 41,5% (17 casos) |
-| Feminicídio | 18 | **201,8d** | 232,3d | 106d | 389d | 25,0% (1 caso) |
-| **Total** | **8.585** | **490,2d** | — | — | **2.113d** | **52,7% (4.522 casos)** |
-
-**Por que Descumprimento de Medida Protetiva tramita mais rápido:**
-Casos de descumprimento (réu viola ordem judicial existente) tendem a ter **instrução mais simples**: a prova central é o próprio descumprimento da ordem, sem a necessidade de extensa produção probatória sobre o fato delituoso subjacente. Isso explica a mediana 255d vs. 420d para Contra a Mulher.
-
-> **Implicação PM²:** 4.522 casos (52,7%) ultrapassaram 365 dias. Os casos com barras mais longas são candidatos imediatos a auditoria judicial — cruzar `case_id` com `violencia_sla_detalhado.csv` (campo `alerta_total == True`) para identificar prioridades de intervenção.
+| Categoria | Mediana | Acima 365d |
+|-----------|---------|-----------|
+| Contra a Mulher | 419,9d | 41,7% |
+| Lesão/Condição de Mulher | 400,6d | 41,9% |
+| Desc. Medida Protetiva | 255,2d | 22,4% |
+| **Total** | **490,2d** | **52,7%** |
 
 ---
 
 #### `violencia_vs_geral.png` — Violin: Violência vs. Outros AP
 
-**O que é:** Violin plot (distribuição de densidade) comparando a duração total entre dois grupos: (1) casos de violência/protetiva (8.585 casos) e (2) demais Ações Penais Ordinárias. Cada "violino" é espelhado — a largura em cada altura representa a densidade de casos naquela duração.
+Violin plot comparando duração total entre violência/protetiva e demais AP Ordinárias.
 
-**Como ler o gráfico:**
-- Eixo Y = duração total em dias (ajuizamento → trânsito)
-- Violino mais **largo** em uma faixa = mais casos concentrados naquela duração
-- Linha interna horizontal = mediana
-- Caixa interna = IQR (25º–75º percentil)
-- Cauda superior longa = presença de outliers com duração extrema
-
-**Achados TJPR:**
-
-| Grupo | N | Mediana | Diferença |
-|-------|---|---------|-----------|
-| Violência/protetiva | 8.585 | **490,2d** | −79,5 dias vs. outros |
-| Outros AP | — | 569,7d | referência |
-
-- Ambos os violinos têm **cauda superior extensa**: casos ultrapassando 1.000 dias existem em ambos os grupos
-- O violino de violência está **deslocado para baixo** (duração menor), indicando prioridade relativa de tramitação no dataset 2020-2026
-- Nenhum dos dois grupos apresenta concentração em durações curtas (< 100 dias): o sistema como um todo é lento
-
-**Diagnóstico legal:**
-
-A CNJ Resolução 254/2018 exige tratamento **prioritário** para casos de violência doméstica. No dataset 2020-2026, o violino de violência está deslocado para **baixo** (durações menores), sugerindo prioridade relativa. Contudo, 53% dos casos ainda excedem 365 dias — ausência de SLA interno padronizado.
-
-> **Interpretação PM²:** A diferença de −79,5 dias (490,2d − 569,7d) sugere prioridade relativa de tramitação. Porém, 4.522/8.585 casos (53%) superam o alerta de 365d — a prioridade existe mas é insuficiente para garantir SLA razoável.
+- Violência: mediana **490,2d** (−79,5d vs. outros 569,7d) — prioridade relativa
+- 53% dos casos violência ainda excedem 365d — SLA insuficiente
 
 ---
 
 #### `violencia_sla_cumprimento.png` — % Casos por Faixa de Prazo (Liminar)
 
-**O que é:** Gráfico de barras verticais mostrando a distribuição dos 8.585 casos de violência/protetiva por faixa de prazo para liminar: ≤2 dias (dentro da referência Lei Maria da Penha), 3–7 dias, 8–30 dias, >30 dias.
+Barras por faixa: ≤2d, 3–7d, 8–30d, >30d. Base: 8.585 casos.
 
-**Como ler o gráfico:**
-- Eixo X = faixas de prazo para liminar
-- Eixo Y = percentual de casos (base: 8.585)
-- Barra "≤2 dias" alta = boa conformidade com o prazo de urgência
-- Barras nas faixas maiores = descumprimento progressivo do prazo
-
-**Achados TJPR:**
-
-De 8.585 casos, apenas **4 tiveram qualquer registro de liminar** (0,05%). A distribuição efetiva:
-- ≤2 dias: 2 casos (0,04%) — dentro do prazo
-- 3–7 dias: 0 casos
-- 8–30 dias: 1 caso (0,02%)
-- >30 dias: 1 caso (0,02%) — 19,1 dias, acima do prazo
-- **Sem liminar: 8.581 casos (99,95%)**
-
-**Por que o gráfico mostra quase tudo vazio:**
-
-Conforme discutido em `violencia_sla_liminar.png`, a Ação Penal Ordinária não é o instrumento de medidas de urgência — essas são processadas em autos separados (cautelar autônoma, art. 19 Lei 11.340/2006). O gráfico praticamente vazio confirma que o fluxo de medidas protetivas de urgência está **corretamente segregado** do processo penal principal.
-
-> **Uso correto desta métrica:** Para medir conformidade com o prazo de 48h da Lei Maria da Penha (art. 18), é necessário analisar os **autos de medida protetiva de urgência** — processo distinto da AP ordinária. Esta análise requereria extração específica por classe processual de cautelar.
+99,95% sem liminar (análise relevante apenas para cautelares autônomas, não para AP principal).
 
 ---
 
 #### `violencia_por_cluster.png` — Violência por Cluster K-Means
 
-**O que é:** Gráfico de barras empilhadas (*stacked bar*) mostrando, para cada um dos 4 clusters K-Means, a proporção entre casos de violência/protetiva (segmento maior) e demais Ações Penais Ordinárias (segmento menor). Permite cruzar o perfil comportamental do cluster com a prevalência de violência doméstica.
+Stacked bar: proporção violência vs. outros AP por cluster.
 
-**Como ler o gráfico:**
-- Eixo X = 4 clusters identificados pelo K-Means
-- Eixo Y = proporção de casos (0 a 1)
-- Segmento superior (cor escura) = casos de violência/protetiva
-- Segmento inferior (cor clara) = outros AP
-- Cluster com segmento superior maior = violência doméstica prevalente naquele perfil comportamental
-
-**Perfil de cada cluster com proporção de violência:**
-
-| Cluster | N | % Violência | Mediana (dias) | Eventos (mediana) | Perfil |
-|---------|---|-------------|---------------|-------------------|--------|
-| 0 | 6.408 | **64,9%** | 588d | 160 eventos | Fluxo dominante (48,4%) |
-| 1 | 3.583 | **65,0%** | 1.072d | 238 eventos | Processos longos com recursos |
-| 2 | 105 | **62,0%** | 1.014d | 206 eventos | Casos atípicos (menor cluster) |
-| 3 | 3.138 | **65,1%** | 775d | 140 eventos | Fluxo secundário |
-
-**Interpretação cruzada — o que o gráfico revela:**
-
-1. **Violência doméstica está em todos os clusters**: proporções entre 62–65% em todos os grupos, confirmando que não existe um "cluster de violência" isolado — esses casos permeiam todos os perfis comportamentais.
-
-2. **Cluster 0 domina (48,4%) com mediana 588d**: fluxo principal com distribuição de violência proporcional ao total (~64,9%).
-
-3. **Cluster 1 combina duração extrema (1.072d)**: este grupo representa o pior cenário operacional — processos longos que deveriam ser prioritários.
-
-4. **Cluster 2 (105 casos, 62,0%)**: amostra pequena de casos atípicos; indica processos complexos não representativos do sistema geral.
-
-> **Implicação PM²:** Violência doméstica distribui proporcionalmente entre clusters (~62-65%). Intervenção prioritária: reduzir duração do Cluster 1 (1.072d, recursos/2º grau) que concentra processos longos.
+Violência distribui proporcionalmente em todos os clusters (62–65%) — não existe "cluster de violência" isolado. Intervenção prioritária: Cluster 1 (1.072d) com 65% de casos de violência.
 
 ---
 
@@ -1265,7 +961,8 @@ Conforme discutido em `violencia_sla_liminar.png`, a Ação Penal Ordinária nã
 | Mineração — Performance | `analises/analisar.py` | ✓ Throughput mediana 755d, P90 1.489d |
 | Mineração — Rework | `analises/analisar.py` | ✓ 100% com rework (13.232/13.234) |
 | Mineração — Organizacional | `analises/analisar.py` | ✓ Varas analisadas (695d–878d) |
-| Mineração — Conformance (descoberto) | `analises/analisar.py` | ✓ Fitness 99.6% ≥ 0.8 (500-sample) |
+| Mineração — Conformance (descoberto) | `analises/analisar.py` | ✓ Fitness 99.6%, Precision ~14%, Gen. ~89% |
+| Mineração — Conformance (normativo CPP 100% estrito) | `analises/conformance_normativo.py` | ✓ Fitness 46.9%, Precision 66.8%, Gen. 86.1%, Simp. 50.0% (0% traces perfeitos, 0 tau) |
 | Mineração — Clustering | `analises/agrupar.py` | ✓ 4 clusters K-Means |
 | Mineração — SLA Violência/Protetiva | `analises/analise_violencia_mulher.py` | ✓ 8.585 casos (~64.9%), mediana 490.2d |
 | Happy Path | `analises/happy_path_report.py` | ✓ Executado |
@@ -1307,3 +1004,60 @@ python run_pipeline.py \
 python gerar_pdf.py
 ```
 
+---
+
+## 9. REFERÊNCIAS
+
+### API Datajud CNJ
+
+| Recurso | Link |
+|---------|------|
+| Documentação oficial | https://datajud-wiki.cnj.jus.br |
+| Portal de acesso | https://www.cnj.jus.br/sistemas/datajud/ |
+| Endpoint TJPR | `https://api-publica.datajud.cnj.jus.br/api_publica_tjpr/_search` |
+| Tabela Processual Unificada (TPU) | https://www.cnj.jus.br/sgt/consulta_publica_classes.php |
+| Painel de transparência CNJ | https://painel-estatistica.stg.cloud.cnj.jus.br |
+
+**Normas relevantes:**
+
+| Norma | Conteúdo |
+|-------|----------|
+| CNJ Resolução 254/2018 | Prioridade de tramitação para casos de violência doméstica |
+| CNJ Resolução 385/2021 | Prioridade de pauta em instâncias superiores |
+| CF art. 5º LXXVIII | Garantia de razoável duração do processo |
+| CPP arts. 394–405 | Fluxo normativo da Ação Penal Ordinária |
+| Lei 11.340/2006 | Lei Maria da Penha |
+
+### Referências
+
+**van der Aalst, W.M.P.** (2016). *Process Mining: Data Science in Action* (2nd ed.). Springer.
+Referência central: discovery, conformance (fitness, precision, generalization, simplicity), perspectiva organizacional.
+https://doi.org/10.1007/978-3-662-49851-4
+
+**van der Aalst, W.M.P.** (2011). *Process Mining: Discovery, Conformance and Enhancement of Business Processes*. Springer.
+https://doi.org/10.1007/978-3-642-19345-3
+
+**Leemans, S.J.J., Fahland, D., van der Aalst, W.M.P.** (2013). Discovering block-structured process models from event logs — A constructive approach. *Petri Nets 2013*, LNCS 7927.
+Algoritmo **Inductive Miner** utilizado para descoberta da Rede de Petri.
+https://doi.org/10.1007/978-3-642-38697-8_17
+
+**van der Aalst, W.M.P., Adriansyah, A., van Dongen, B.** (2012). Replaying history on process models for conformance checking and performance analysis. *WIREs Data Mining and Knowledge Discovery*, 2(2).
+Base do **Token-Based Replay (TBR)** utilizado no conformance check.
+https://doi.org/10.1002/widm.1045
+
+**Munoz-Gama, J., Carmona, J.** (2010). A Fresh Look at Precision in Process Conformance. *BPM 2010*, LNCS 6336.
+Base da métrica **ETC Precision**.
+https://doi.org/10.1007/978-3-642-15618-2_16
+
+**Leemans, M., van der Aalst, W.M.P.** (2018). Using process mining to investigate judicial processes. *SSRN*.
+https://doi.org/10.2139/ssrn.3280716
+
+### Ferramentas
+
+| Ferramenta | Referência |
+|------------|-----------|
+| **PM4Py** (Fraunhofer FIT / RWTH Aachen) | https://pm4py.fit.fraunhofer.de |
+| **Disco** (Fluxicon) | https://fluxicon.com/disco/ |
+| **IEEE XES Standard** | https://xes-standard.org/ |
+| **Python** | https://python.org |
+| **scikit-learn** | https://scikit-learn.org |

@@ -3,7 +3,7 @@
 Análise SLA — Ação Penal - Procedimento Ordinário: Violência contra a Mulher
 e Medida Protetiva (TJPR, 2023–2026).
 
-Metodologia PM² — Análise Especializada (Perspectiva Legal e Urgência)
+Metodologia PM² — Análise Aprofundada (Perspectiva Legal e Urgência)
 
 Contexto legal:
   - Lei Maria da Penha (Lei 11.340/2006) art. 18: medida protetiva de urgência
