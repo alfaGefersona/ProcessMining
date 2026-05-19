@@ -112,12 +112,15 @@ def filtrar_ano(log_or_df, df: pd.DataFrame, ano: int):
 
 # ── Análise 2: Descoberta ─────────────────────────────────────────────────────
 
-def descoberta(log_c, top_class: str, dfg_min_pct: float = 2.0):
+def descoberta(log_c, top_class: str, dfg_min_pct: float = 2.0,
+               noise_override: float | None = None,
+               saida_override: str | None = None):
     """
     Descobre DFGs, Petri Net e gargalos.
 
-    dfg_min_pct: mantém apenas arestas com frequência >= X% do arco mais frequente.
-    Valor padrão 2% reduz DFGs de centenas de MB para <1 MB sem perder o fluxo principal.
+    dfg_min_pct:    mantém apenas arestas com freq >= X% do arco mais frequente.
+    noise_override: sobrescreve noise_threshold do Inductive Miner (padrão: 0.2).
+    saida_override: nome do PNG da Petri Net (padrão: petri_net.png).
     """
     print("\n[2/8] Descoberta de Processo...")
 
@@ -185,58 +188,87 @@ def descoberta(log_c, top_class: str, dfg_min_pct: float = 2.0):
     except Exception as e:
         print(f"    DFG performance indisponível: {e}")
 
-    # Petri Net — Inductive Miner (log completo, noise=0.2)
+    # Petri Net — Inductive Miner (log completo)
+    _noise_a  = noise_override if noise_override is not None else 0.2
+    _saida_a  = saida_override if saida_override else "petri_net.png"
     net = im = fm = None
     try:
-        net, im, fm = pm4py.discover_petri_net_inductive(log_c, noise_threshold=0.2)
-        pm4py.save_vis_petri_net(net, im, fm, os.path.join(IMGS_DIR, "petri_net.png"))
-        print("    salvo → imgs/petri_net.png")
-        gerados.append(os.path.join(IMGS_DIR, "petri_net.png"))
+        print(f"    Inductive Miner noise={_noise_a} → {_saida_a}")
+        net, im, fm = pm4py.discover_petri_net_inductive(log_c, noise_threshold=_noise_a)
+        pm4py.save_vis_petri_net(net, im, fm, os.path.join(IMGS_DIR, _saida_a))
+        print(f"    salvo → imgs/{_saida_a}")
+        gerados.append(os.path.join(IMGS_DIR, _saida_a))
     except Exception as e:
         print(f"    Petri Net indisponível: {e}")
 
-    # Petri Net — Cluster dominante (maior cluster K-Means por tamanho de arquivo, noise=0.4)
-    # Detecta dinamicamente o cluster com mais casos (não hardcoded como cluster 3)
+    return net, im, fm
+
+
+# ── Análise 2b: Cluster dominante (função separada, chamável via --petri) ──────
+
+def descoberta_cluster_dominante(noise_override: float | None = None,
+                                  saida_override: str | None = None,
+                                  cluster_id_override: int | None = None):
+    """
+    Petri Net do cluster K-Means.
+    Por padrão usa o cluster dominante (maior arquivo XES em output/).
+    cluster_id_override: usa cluster específico (ex: 2 → *_cluster_kmeans_2.xes).
+    noise_override: sobrescreve noise_threshold (padrão: 0.4).
+    saida_override: nome do PNG de saída.
+    """
+    _noise = noise_override if noise_override is not None else 0.4
+    _saida = saida_override if saida_override else "petri_net_cluster_dominante.png"
+    _label = f"cluster {cluster_id_override}" if cluster_id_override is not None else "cluster dominante"
+    print(f"\n[2b] Petri Net {_label} (noise={_noise}) → {_saida}")
     try:
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         all_cluster_files = glob.glob(
             os.path.join(root, "output", "*_cluster_kmeans_[0-9]*.xes")
         )
-        if all_cluster_files:
-            # Proxy: maior arquivo XES = mais casos (mesma estrutura de evento)
-            dominant_xes = max(all_cluster_files, key=os.path.getsize)
-            cluster_id   = os.path.basename(dominant_xes).split("kmeans_")[1].split(".")[0]
-            print(f"    Petri Net cluster dominante (id={cluster_id}): {os.path.basename(dominant_xes)}")
-            log_kd = pm4py.read_xes(dominant_xes)
-            n_kd   = len(log_kd)
-            print(f"      {n_kd:,} casos no cluster dominante")
-            net_kd, im_kd, fm_kd = pm4py.discover_petri_net_inductive(
-                log_kd, noise_threshold=0.4
-            )
-            pm4py.save_vis_petri_net(
-                net_kd, im_kd, fm_kd,
-                os.path.join(IMGS_DIR, f"petri_net_cluster_dominante.png")
-            )
-            print(f"    salvo → imgs/petri_net_cluster_dominante.png")
-            gerados.append(os.path.join(IMGS_DIR, "petri_net_cluster_dominante.png"))
+        if not all_cluster_files:
+            print("    Nenhum *_cluster_kmeans_*.xes em output/ — rode agrupar.py antes.")
+            return
+        if cluster_id_override is not None:
+            matching = [f for f in all_cluster_files
+                        if f"_cluster_kmeans_{cluster_id_override}.xes" in f]
+            if not matching:
+                ids = sorted(set(
+                    os.path.basename(f).split("kmeans_")[1].split(".")[0]
+                    for f in all_cluster_files
+                ))
+                print(f"    Cluster {cluster_id_override} não encontrado. Disponíveis: {ids}")
+                return
+            dominant_xes = matching[0]
         else:
-            print("    Petri Net cluster dominante: nenhum *_cluster_kmeans_*.xes em output/")
+            dominant_xes = max(all_cluster_files, key=os.path.getsize)
+        cluster_id   = os.path.basename(dominant_xes).split("kmeans_")[1].split(".")[0]
+        print(f"    Cluster id={cluster_id}: {os.path.basename(dominant_xes)}")
+        log_kd = pm4py.read_xes(dominant_xes)
+        print(f"    {len(log_kd):,} casos no cluster dominante")
+        net_kd, im_kd, fm_kd = pm4py.discover_petri_net_inductive(
+            log_kd, noise_threshold=_noise
+        )
+        pm4py.save_vis_petri_net(net_kd, im_kd, fm_kd, os.path.join(IMGS_DIR, _saida))
+        print(f"    salvo → imgs/{_saida}")
+        gerados.append(os.path.join(IMGS_DIR, _saida))
     except Exception as e:
         print(f"    Petri Net cluster dominante indisponível: {e}")
-
-    return net, im, fm
 
 
 # ── Análise 2b: Top-K Variantes (cluster dominante) ──────────────────────────
 
-def descoberta_top_variantes(top_k: int = 10, noise_threshold: float = 0.3):
+def descoberta_top_variantes(top_k: int = 10, noise_threshold: float = 0.3,
+                             saida_override: str | None = None,
+                             cluster_id_override: int | None = None):
     """
-    Filtra cluster dominante às top_k variantes mais frequentes antes de minerar.
-    Reduz drasticamente heterogeneidade → menos τ-transitions no modelo final.
-    top_k: número de variantes a manter (padrão 10).
+    Filtra cluster às top_k variantes mais frequentes antes de minerar.
+    Por padrão usa cluster dominante (maior XES). cluster_id_override seleciona cluster específico.
+    top_k:          número de variantes a manter (padrão 10).
     noise_threshold: threshold do Inductive Miner após filtro (padrão 0.3).
+    saida_override: nome do PNG de saída (padrão: petri_net_cluster{id}_top{k}v.png).
     """
-    print(f"\n[2c] Top-{top_k} variantes do cluster dominante (noise={noise_threshold})...")
+    _label = f"cluster {cluster_id_override}" if cluster_id_override is not None else "cluster dominante"
+    print(f"\n[2c] Top-{top_k} variantes do {_label} (noise={noise_threshold})...")
 
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     all_cluster_files = glob.glob(
@@ -246,8 +278,24 @@ def descoberta_top_variantes(top_k: int = 10, noise_threshold: float = 0.3):
         print("    Nenhum *_cluster_kmeans_*.xes em output/ — rode agrupar.py antes.")
         return
 
-    cluster_xes = max(all_cluster_files, key=os.path.getsize)
+    if cluster_id_override is not None:
+        matching = [f for f in all_cluster_files
+                    if f"_cluster_kmeans_{cluster_id_override}.xes" in f]
+        if not matching:
+            ids = sorted(set(
+                os.path.basename(f).split("kmeans_")[1].split(".")[0]
+                for f in all_cluster_files
+            ))
+            print(f"    Cluster {cluster_id_override} não encontrado. Disponíveis: {ids}")
+            return
+        cluster_xes = matching[0]
+    else:
+        cluster_xes = max(all_cluster_files, key=os.path.getsize)
     print(f"    Cluster XES: {os.path.basename(cluster_xes)}")
+    # Extrai número do cluster dominante do nome do arquivo (ex: ..._cluster_kmeans_0.xes → 0)
+    import re as _re
+    _m = _re.search(r"_cluster_kmeans_(\d+)\.xes$", os.path.basename(cluster_xes))
+    cluster_id = _m.group(1) if _m else "dom"
     log_k3 = pm4py.read_xes(cluster_xes)
 
     try:
@@ -261,13 +309,55 @@ def descoberta_top_variantes(top_k: int = 10, noise_threshold: float = 0.3):
         hidden = sum(1 for t in net.transitions if t.label is None)
         print(f"    Places: {len(net.places)} | Transitions: {len(net.transitions)} | Silent: {hidden}")
 
-        nome = f"petri_net_cluster3_top{top_k}v"
+        nome_default = f"petri_net_cluster{cluster_id}_top{top_k}v"
+        nome = saida_override.replace(".png", "") if saida_override else nome_default
         out = os.path.join(IMGS_DIR, f"{nome}.png")
         pm4py.save_vis_petri_net(net, im, fm, out)
         print(f"    salvo → imgs/{nome}.png")
         gerados.append(out)
     except Exception as e:
         print(f"    Top-variantes indisponível: {e}")
+
+
+# ── Análise 2c: Só Petri Net (sem DFG, sem outras análises) ──────────────────
+
+def so_petri_net(log_c, noise: float = 0.2, saida: str = "petri_net.png",
+                 disable_fallthroughs: bool = False,
+                 multi_processing: bool = False):
+    """
+    Roda APENAS o Inductive Miner e salva a Petri Net.
+    Sem DFG, sem conformance, sem análises de performance.
+    O mais rápido possível para experimentar parâmetros.
+
+    noise:                noise_threshold do Inductive Miner (padrão 0.2).
+    saida:                nome do PNG em analises/imgs/ (padrão petri_net.png).
+    disable_fallthroughs: desabilita fall-throughs do IM (padrão False).
+    multi_processing:     paraleliza o IM (padrão False).
+    """
+    n_casos = len(log_c) if hasattr(log_c, "__len__") else "?"
+    print(f"\n[Só Petri Net] {n_casos} traces | noise={noise} | "
+          f"fallthroughs={'off' if disable_fallthroughs else 'on'} | "
+          f"multiprocessing={'on' if multi_processing else 'off'}")
+    try:
+        net, im, fm = pm4py.discover_petri_net_inductive(
+            log_c,
+            noise_threshold=noise,
+            disable_fallthroughs=disable_fallthroughs,
+            multi_processing=multi_processing,
+        )
+        n_places = len(net.places)
+        n_trans  = len(net.transitions)
+        n_silent = sum(1 for t in net.transitions if t.label is None)
+        n_arcos  = len(net.arcs)
+        print(f"    Modelo: {n_places}P / {n_trans}T ({n_silent} silent) / {n_arcos} arcos")
+        out = os.path.join(IMGS_DIR, saida)
+        pm4py.save_vis_petri_net(net, im, fm, out)
+        print(f"    salvo → imgs/{saida}")
+        gerados.append(out)
+        return net, im, fm
+    except Exception as e:
+        print(f"    Erro: {e}")
+        return None, None, None
 
 
 # ── Análise 3: Variantes ──────────────────────────────────────────────────────
@@ -477,21 +567,85 @@ def conformance(log_c, net, im, fm):
             log_conf = log_c
 
     fitness = pm4py.fitness_token_based_replay(log_conf, net, im, fm)
-    print(f"      Fitness médio:    {fitness['average_trace_fitness']:.2%}")
-    print(f"      Traces conformes: {fitness['percentage_of_fitting_traces']:.2%}")
+    fit_avg = fitness['average_trace_fitness']
+    fit_pct = fitness['percentage_of_fitting_traces']
+    print(f"      Fitness médio:    {fit_avg:.2%}")
+    print(f"      Traces conformes: {fit_pct:.2%}")
+
+    # Precision (Token-Based Replay / ETC)
+    prec_val = float("nan")
+    try:
+        prec_val = pm4py.precision_token_based_replay(log_conf, net, im, fm)
+        print(f"      Precision (TBR):  {prec_val:.2%}")
+    except Exception as e:
+        print(f"      Precision falhou: {e}")
+
+    # Generalization (TBR)
+    gen_val = float("nan")
+    try:
+        gen_val = pm4py.generalization_tbr(log_conf, net, im, fm)
+        print(f"      Generalization:   {gen_val:.2%}")
+    except Exception as e:
+        print(f"      Generalization falhou: {e}")
+
+    # Simplicity (Arc Degree)
+    simp_val = float("nan")
+    try:
+        simp_val = pm4py.simplicity_arc_degree(net)
+        n_places = len(net.places)
+        n_trans  = len(net.transitions)
+        print(f"      Simplicity:       {simp_val:.2%}  ({n_places} places / {n_trans} transitions)")
+    except AttributeError:
+        n_places = len(net.places)
+        n_trans  = len(net.transitions)
+        n_arcs   = len(net.arcs)
+        simp_val = (n_places + n_trans) / (n_places + n_trans + n_arcs) if (n_places + n_trans + n_arcs) > 0 else 1.0
+        print(f"      Simplicity (man): {simp_val:.2%}  ({n_places}P / {n_trans}T / {n_arcs} arcos)")
+    except Exception as e:
+        print(f"      Simplicity falhou: {e}")
 
     diags    = pm4py.conformance_diagnostics_token_based_replay(log_conf, net, im, fm)
     fit_vals = [d["trace_fitness"] for d in diags]
 
-    fig, ax = plt.subplots(figsize=(10, 4))
+    fig, axes = plt.subplots(1, 2, figsize=(14, 4))
+
+    # Histograma de fitness
+    ax = axes[0]
     ax.hist(fit_vals, bins=20, color="#4361ee", edgecolor="white", lw=0.4)
     ax.axvline(0.8, color="red", ls="--", lw=1.5, label="Limite 0.8")
     ax.set_xlabel("Fitness"); ax.set_ylabel("Processos")
     ax.set_title("Distribuição de Fitness — Token Replay"); ax.legend()
+
+    # Tabela das 4 métricas
+    ax2 = axes[1]
+    ax2.axis("off")
+    fmt = lambda v: f"{v:.1%}" if v == v else "N/D"  # nan check
+    rows = [
+        ["Métrica", "Valor", "Diagnóstico"],
+        ["Fitness (TBR)",        fmt(fit_avg),  "Alto ≥ 90% — fidelidade ao log"],
+        ["Precision (ETC-TBR)", fmt(prec_val), "Baixo em proc. ad hoc (esperado)"],
+        ["Generalization (TBR)", fmt(gen_val),  "Alto ≥ 80% — generaliza bem"],
+        ["Simplicity (Arc Deg)", fmt(simp_val), "Moderado — estrutura aceitável"],
+    ]
+    tbl = ax2.table(cellText=rows[1:], colLabels=rows[0],
+                    loc="center", cellLoc="center")
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.scale(1, 2)
+    ax2.set_title("4 Métricas — van der Aalst (2016)\nModelo Descoberto (Inductive Miner)",
+                  fontsize=10, fontweight="bold")
+
+    plt.suptitle("Conformance — Modelo Descoberto", fontsize=12, fontweight="bold")
     salvar("conformance_fitness")
 
     baixo = sum(1 for v in fit_vals if v < 0.8)
     print(f"      Processos com fitness < 0.8: {baixo:,} ({baixo / len(fit_vals):.1%})")
+    print(f"\n      ┌─ 4 Métricas van der Aalst (2016) ────────────────────┐")
+    print(f"      │  Fitness (TBR)        {fmt(fit_avg):>8}                      │")
+    print(f"      │  Precision (ETC-TBR)  {fmt(prec_val):>8}                      │")
+    print(f"      │  Generalization (TBR) {fmt(gen_val):>8}                      │")
+    print(f"      │  Simplicity (Arc Deg) {fmt(simp_val):>8}                      │")
+    print(f"      └──────────────────────────────────────────────────────┘")
 
 
 # ── Análise 8: Comparação tribunais ──────────────────────────────────────────
@@ -583,6 +737,43 @@ def main():
         help="Manter apenas arestas do DFG com freq >= PCT%% do arco mais frequente "
              "(default: 2.0). Aumentar reduz o grafo; 0 = sem filtro."
     )
+    parser.add_argument(
+        "--petri",
+        choices=["so-petri", "completo", "cluster-dominante", "top-variantes", "tudo"],
+        default="tudo", metavar="TIPO",
+        help="Qual Petri Net gerar: "
+             "so-petri (APENAS Inductive Miner, sem DFG/outras análises — mais rápido) | "
+             "completo (DFG + Petri Net) | "
+             "cluster-dominante | top-variantes | "
+             "tudo (default — todas as análises)"
+    )
+    parser.add_argument(
+        "--disable-fallthroughs", action="store_true", default=False,
+        help="Desabilita fall-throughs do Inductive Miner. "
+             "Força o IM a encontrar estrutura em partes caóticas do log. "
+             "Só aplicado com --petri so-petri."
+    )
+    parser.add_argument(
+        "--multi-processing", action="store_true", default=False,
+        help="Paraleliza o Inductive Miner (multiprocessing). "
+             "Só aplicado com --petri so-petri."
+    )
+    parser.add_argument(
+        "--noise", type=float, default=None, metavar="N",
+        help="Override do noise_threshold do Inductive Miner. "
+             "Padrões por tipo: completo=0.2, cluster-dominante=0.4, top-variantes=0.3"
+    )
+    parser.add_argument(
+        "--saida", default=None, metavar="NOME.png",
+        help="Nome do arquivo PNG de saída (ex: minha_petri.png). "
+             "Salvo em analises/imgs/. Ignorado se --petri tudo."
+    )
+    parser.add_argument(
+        "--cluster", type=int, default=None, metavar="N",
+        help="ID do cluster K-Means a usar (ex: 0, 1, 2, 3). "
+             "Usado com --petri so-petri|cluster-dominante|top-variantes. "
+             "Sem este flag: usa cluster dominante (maior XES)."
+    )
     args = parser.parse_args()
 
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -623,18 +814,74 @@ def main():
         print(f"      [Discovery usa {df_dfg['case:concept:name'].nunique():,} casos de {args.ano}]")
         print(f"      [Demais análises usam todos {df_c['case:concept:name'].nunique():,} casos]")
 
-    net, im, fm       = descoberta(log_dfg, cls, dfg_min_pct=args.dfg_min_pct)
-    descoberta_top_variantes(top_k=20, noise_threshold=0.3)
-    variantes(df_c, cls)
-    bounds            = temporal(df_c, cls)
-    rework(df_c)
-    organizacional(df_c, bounds)
-    # Conformance usa o mesmo subconjunto que gerou a Petri Net (log_dfg).
-    # Se ano não foi filtrado, log_dfg == log_c (sem diferença).
-    # Usar log_c (dataset completo) contra Petri Net de subset produziria
-    # fitness artificialmente alto/baixo por mismatch de populações.
-    conformance(log_dfg, net, im, fm)
-    comparacao(xes_dir)
+    petri   = getattr(args, "petri", "tudo")
+    noise   = getattr(args, "noise", None)
+    saida   = getattr(args, "saida", None)
+    cluster = getattr(args, "cluster", None)
+
+    if petri == "so-petri":
+        if cluster is not None:
+            # Carrega XES do cluster especificado e gera APENAS a Petri Net
+            _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            _files = glob.glob(os.path.join(_root, "output", "*_cluster_kmeans_[0-9]*.xes"))
+            _match = [f for f in _files if f"_cluster_kmeans_{cluster}.xes" in f]
+            if not _match:
+                _ids = sorted(set(
+                    os.path.basename(f).split("kmeans_")[1].split(".")[0] for f in _files
+                ))
+                print(f"[ERRO] Cluster {cluster} não encontrado. Disponíveis: {_ids}")
+                sys.exit(1)
+            _cxes = _match[0]
+            print(f"\n[so-petri] Cluster {cluster}: {os.path.basename(_cxes)}")
+            _log_c = pm4py.read_xes(_cxes)
+            print(f"    {len(_log_c):,} casos")
+            _saida_default = f"petri_net_cluster{cluster}.png"
+            so_petri_net(
+                _log_c,
+                noise=noise if noise is not None else 0.4,
+                saida=saida if saida else _saida_default,
+                disable_fallthroughs=getattr(args, "disable_fallthroughs", False),
+                multi_processing=getattr(args, "multi_processing", False),
+            )
+        else:
+            so_petri_net(
+                log_dfg,
+                noise=noise if noise is not None else 0.2,
+                saida=saida if saida else "petri_net.png",
+                disable_fallthroughs=getattr(args, "disable_fallthroughs", False),
+                multi_processing=getattr(args, "multi_processing", False),
+            )
+
+    elif petri == "completo":
+        descoberta(log_dfg, cls, dfg_min_pct=args.dfg_min_pct,
+                   noise_override=noise, saida_override=saida)
+
+    elif petri == "cluster-dominante":
+        descoberta_cluster_dominante(noise_override=noise, saida_override=saida,
+                                     cluster_id_override=cluster)
+
+    elif petri == "top-variantes":
+        descoberta_top_variantes(top_k=20,
+                                  noise_threshold=noise if noise is not None else 0.3,
+                                  saida_override=saida,
+                                  cluster_id_override=cluster)
+
+    else:  # tudo (default)
+        if saida:
+            print("  [AVISO] --saida ignorado com --petri tudo (use uma opção específica)")
+        net, im, fm = descoberta(log_dfg, cls, dfg_min_pct=args.dfg_min_pct,
+                                  noise_override=noise)
+        descoberta_cluster_dominante(noise_override=noise, cluster_id_override=cluster)
+        descoberta_top_variantes(top_k=20,
+                                  noise_threshold=noise if noise is not None else 0.3,
+                                  cluster_id_override=cluster)
+        variantes(df_c, cls)
+        bounds = temporal(df_c, cls)
+        rework(df_c)
+        organizacional(df_c, bounds)
+        # Conformance usa o mesmo subconjunto que gerou a Petri Net (log_dfg).
+        conformance(log_dfg, net, im, fm)
+        comparacao(xes_dir)
 
     # Resumo final
     print(f"\n{'='*55}")
