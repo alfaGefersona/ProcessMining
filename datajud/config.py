@@ -42,7 +42,7 @@ REQUEST_TIMEOUT = 90
 MAX_RETRIES = 3
 
 # Limite de processos por tribunal (None = sem limite)
-MAX_PROCESSOS = 50000  # AP Ordinária sem filtro assunto 2023-2026
+MAX_PROCESSOS = 1000  # AP Ordinária sem filtro assunto 2023-2026
 
 # ==============================================================================
 # CAMPOS DO PROCESSO — trace no XES

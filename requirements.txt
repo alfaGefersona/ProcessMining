@@ -1,3 +1,4 @@
 requests>=2.31.0
 openpyxl>=3.1
 pm4py>=2.7.0
+elasticsearch==8.13.0
